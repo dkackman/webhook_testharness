@@ -1,0 +1,25 @@
+extends layout
+
+block content
+  h2= title
+
+  div(style="margin-bottom: 20px;")
+    label(for="secret-input" style="display: block; margin-bottom: 5px; font-weight: bold;") Webhook Secret (optional):
+    input#secret-input(type="text" placeholder="Enter secret for HMAC verification" style="width: 100%; max-width: 500px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;")
+    small(style="display: block; margin-top: 5px; color: #666;") If provided, webhooks will be signed with HMAC-SHA256
+
+  button#register-btn(onclick="registerWebhook()") Register Webhook
+  button#unregister-btn(onclick="unregisterWebhook()" style="display: none;") Unregister Webhook
+  
+  article.small
+    h3 Registration:
+    pre#response-display Hook not registered
+    div#verification-status(style="margin-top: 10px; padding: 10px; border-radius: 4px; background-color: #f0f0f0;")
+      strong HMAC Verification: 
+      span#verification-enabled Disabled
+
+    h3 Live Webhook Events:
+    div.small
+      pre#webhook-events.small No webhook events yet
+
+  script(src='/javascripts/webhook.js')
