@@ -29,7 +29,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.post(
   '/sage_hook',
   bodyParser.raw({ type: 'application/json' }),
-  (req, res) => {
+  async (req, res) => {
     const signature = req.headers['x-webhook-signature'];
     let verificationStatus = 'No signature required';
     let isValid = true;
@@ -79,12 +79,35 @@ app.post(
     }
 
     const parsedBody = JSON.parse(req.body.toString());
+    console.log('Webhook received:', parsedBody);
+    console.log('Verification status:', verificationStatus);
+
+    // Check if we need to lookup transaction details
+    let transactionDetails = null;
+    if (
+      parsedBody.event_type === 'transaction_updated' ||
+      parsedBody.event_type === 'transaction_confirmed'
+    ) {
+      const transactionId = parsedBody.data?.transaction_id;
+      if (transactionId) {
+        console.log(`Looking up transaction: ${transactionId}`);
+        try {
+          transactionDetails = await getTransactionById(transactionId);
+          console.log('Transaction details retrieved:', transactionDetails);
+        } catch (error) {
+          console.error('Failed to get transaction details:', error.message);
+          transactionDetails = { error: error.message };
+        }
+      }
+    }
+
     const eventData = {
       id: Date.now(),
       event: 'webhook',
       data: JSON.stringify({
         timestamp: new Date().toISOString(),
         body: parsedBody,
+        transaction_details: transactionDetails,
         verification: verificationStatus,
         signature: signature || 'none',
       }),
@@ -155,6 +178,61 @@ function broadcastSSEEvent(eventData) {
       sseConnections.delete(res);
     }
   });
+}
+
+// Function to get transaction by ID
+async function getTransactionById(transactionId) {
+  try {
+    const agent = createMTLSAgent();
+    
+    const postData = JSON.stringify({
+      transaction_id: transactionId
+    });
+
+    const options = {
+      hostname: 'localhost',
+      port: 9257,
+      path: '/get_transaction_by_id',
+      method: 'POST',
+      agent: agent,
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData),
+      },
+    };
+
+    return new Promise((resolve, reject) => {
+      const req = https.request(options, (res) => {
+        let data = '';
+
+        res.on('data', (chunk) => {
+          console.log('Received chunk of data:', chunk.toString());
+          data += chunk;
+        });
+
+        res.on('end', () => {
+          try {
+            const jsonData = JSON.parse(data);
+            resolve(jsonData);
+          } catch (e) {
+            console.error('Failed to parse response:', e);
+            reject(e);
+          }
+        });
+      });
+
+      req.on('error', (err) => {
+        console.error('Request error:', err);
+        reject(err);
+      });
+
+      req.write(postData);
+      req.end();
+    });
+  } catch (error) {
+    console.error('Error creating request:', error);
+    throw error;
+  }
 }
 
 function createMTLSAgent() {

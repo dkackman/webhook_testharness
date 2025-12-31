@@ -21,30 +21,30 @@ A web-based test harness for receiving and testing [Sage Wallet(https://sagewall
    ```
 
 3. **Configure environment variables:**
-   
-   Create a `.env` file in the root directory with your mTLS certificate configuration:
-   
-   ```env
-   # Option 1: Use certificate file paths
-   CLIENT_CERT_PATH=/path/to/client-cert.pem
-   CLIENT_KEY_PATH=/path/to/client-key.pem
-   
-   # Option 2: Use certificate content directly
-   CLIENT_CERT="-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----"
-   CLIENT_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+
+Create a `.env` file in the root directory with your mTLS certificate configuration:
+
+```env
+# Option 1: Use certificate file paths
+CLIENT_CERT_PATH=/path/to/client-cert.pem
+CLIENT_KEY_PATH=/path/to/client-key.pem
+
+# Option 2: Use certificate content directly
+CLIENT_CERT="-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----"
+CLIENT_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
    ```
 
 4. **Configure webhook server settings:**
-   
-   By default, the proxy connects to `localhost:9257`. Update the hostname and port in `app.js` if your webhook server is located elsewhere:
-   
-   ```javascript
-   const options = {
-     hostname: 'localhost',
-     port: 9257,
-     // ...
-   };
-   ```
+
+By default, the proxy connects to `localhost:9257`. Update the hostname and port in `app.js` if your webhook server is located elsewhere:
+
+```javascript
+const options = {
+    hostname: 'localhost',
+    port: 9257,
+    // ...
+};
+```
 
 ## Running the Application
 
