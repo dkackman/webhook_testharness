@@ -29,7 +29,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.post(
   '/sage_hook',
   bodyParser.raw({ type: 'application/json' }),
-  async (req, res) => {
+  (req, res) => {
     const signature = req.headers['x-webhook-signature'];
     let verificationStatus = 'No signature required';
     let isValid = true;
@@ -82,32 +82,12 @@ app.post(
     console.log('Webhook received:', parsedBody);
     console.log('Verification status:', verificationStatus);
 
-    // Check if we need to lookup transaction details
-    let transactionDetails = null;
-    if (
-      parsedBody.event_type === 'transaction_updated' ||
-      parsedBody.event_type === 'transaction_confirmed'
-    ) {
-      const transactionId = parsedBody.data?.transaction_id;
-      if (transactionId) {
-        console.log(`Looking up transaction: ${transactionId}`);
-        try {
-          transactionDetails = await getTransactionById(transactionId);
-          console.log('Transaction details retrieved:', transactionDetails);
-        } catch (error) {
-          console.error('Failed to get transaction details:', error.message);
-          transactionDetails = { error: error.message };
-        }
-      }
-    }
-
     const eventData = {
       id: Date.now(),
       event: 'webhook',
       data: JSON.stringify({
         timestamp: new Date().toISOString(),
         body: parsedBody,
-        transaction_details: transactionDetails,
         verification: verificationStatus,
         signature: signature || 'none',
       }),
@@ -124,7 +104,7 @@ app.post(
 );
 
 // Endpoint to sync secret from browser cookie to server memory
-//for demonstration purposes only
+// for demonstration purposes only
 app.post('/sync_secret', bodyParser.json(), (req, res) => {
   const { secret } = req.body;
   if (secret) {
@@ -149,16 +129,7 @@ app.get('/events', (req, res) => {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Cache-Control',
   });
-
-  // Send initial connection event
-  res.write(
-    `data: ${JSON.stringify({
-      id: Date.now(),
-      event: 'connected',
-      data: 'Connected to proxy event stream (register webhook to receive events)',
-    })}\n\n`,
-  );
-
+  
   sseConnections.add(res);
 
   // Handle client disconnect
@@ -410,6 +381,28 @@ app.post('/proxy/unregister_webhook', (req, res, next) => {
       proxy_message: 'Failed to unregister webhook',
       error: error.message,
       details: 'Configuration or certificate error - check server logs'
+    });
+  }
+});
+
+// Proxy endpoint for getting transaction by ID
+app.get('/proxy/get_transaction', async (req, res) => {
+  try {
+    const transactionId = req.query.transaction_id;
+    
+    if (!transactionId) {
+      return res.status(400).json({
+        error: 'Missing transaction_id query parameter'
+      });
+    }
+
+    const transactionData = await getTransactionById(transactionId);
+    res.json(transactionData);
+  } catch (error) {
+    console.error('Error getting transaction:', error);
+    res.status(500).json({
+      error: 'Failed to get transaction',
+      message: error.message
     });
   }
 });

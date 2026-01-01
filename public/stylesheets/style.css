@@ -1,5 +1,5 @@
 body {
-  padding: 50px;
+  padding: 16px;
   font:
     14px 'Lucida Grande',
     Helvetica,
@@ -9,4 +9,18 @@ body {
 
 a {
   color: #00b7ff;
+}
+
+.log-panel {
+  min-height: 420px;
+  max-height: 70vh;
+  overflow: auto;
+  padding: 12px;
+  background: var(--bs-body-bg);
+}
+
+.log-panel-sm {
+  min-height: 160px;
+  max-height: 35vh;
+  overflow: auto;
 }

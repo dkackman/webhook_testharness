@@ -1,25 +1,41 @@
 extends layout
 
 block content
-  h2= title
+  .container-fluid
+    .d-flex.align-items-center.justify-content-between.mb-3
+      h2.mb-0= title
+      .d-flex.gap-2.align-items-center
+        span.badge.text-bg-secondary#webhook-status Not registered
 
-  div(style="margin-bottom: 20px;")
-    label(for="secret-input" style="display: block; margin-bottom: 5px; font-weight: bold;") Webhook Secret (optional):
-    input#secret-input(type="text" placeholder="Enter secret for HMAC verification" style="width: 100%; max-width: 500px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;")
-    small(style="display: block; margin-top: 5px; color: #666;") If provided, webhooks will be signed with HMAC-SHA256
+    .row.g-3
+      .col-lg-8
+        .card
+          .card-header.d-flex.align-items-center.justify-content-between
+            .fw-semibold Live Webhook Events
+            button.btn.btn-sm.btn-outline-secondary(type="button" onclick="clearWebhookEvents()") Clear
+          .card-body.p-0
+            #webhook-events.log-panel.font-monospace.small No webhook events yet
 
-  button#register-btn(onclick="registerWebhook()") Register Webhook
-  button#unregister-btn(onclick="unregisterWebhook()" style="display: none;") Unregister Webhook
-  
-  article.small
-    h3 Registration:
-    pre#response-display Hook not registered
-    div#verification-status(style="margin-top: 10px; padding: 10px; border-radius: 4px; background-color: #f0f0f0;")
-      strong HMAC Verification: 
-      span#verification-enabled Disabled
+      .col-lg-4
+        .card.mb-3
+          .card-header.fw-semibold Webhook Setup
+          .card-body
+            label.form-label(for="secret-input") Webhook Secret (optional)
+            input#secret-input.form-control(type="text" placeholder="Enter secret for HMAC verification")
+            .form-text If provided, webhooks will be signed with HMAC-SHA256.
 
-    h3 Live Webhook Events:
-    div.small
-      pre#webhook-events.small No webhook events yet
+            .d-flex.gap-2.mt-3
+              button#register-btn.btn.btn-primary(type="button" onclick="registerWebhook()") Register
+              button#unregister-btn.btn.btn-outline-danger(type="button" onclick="unregisterWebhook()" style="display: none;") Unregister
+
+            #verification-status.alert.alert-secondary.mt-3.mb-0.p-2
+              .d-flex.align-items-center.justify-content-between
+                span.fw-semibold HMAC Verification
+                span#verification-enabled.badge.text-bg-secondary Disabled
+
+        .card
+          .card-header.fw-semibold Registration Response
+          .card-body.p-0
+            pre#response-display.log-panel-sm.font-monospace.small.m-0.p-3 Hook not registered
 
   script(src='/javascripts/webhook.js')

@@ -19,24 +19,46 @@ function deleteCookie(name) {
 let webhookId = getCookie('webhookId');
 let webhookSecret = getCookie('webhookSecret');
 
+let eventHistory = [];
+
+function setBadge($el, text, variant) {
+  const variants = [
+    'text-bg-secondary',
+    'text-bg-success',
+    'text-bg-danger',
+    'text-bg-warning',
+    'text-bg-info',
+    'text-bg-light',
+    'text-bg-dark',
+  ];
+  variants.forEach((v) => $el.removeClass(v));
+  $el.addClass(`text-bg-${variant}`).text(text);
+}
+
 function updateButtonStates() {
   if (webhookId) {
     $('#register-btn').hide();
     $('#unregister-btn').show();
     $('#secret-input').prop('disabled', true);
     $('#response-display').text(`Webhook registered (ID: ${webhookId})`);
+    setBadge($('#webhook-status'), 'Registered', 'success');
   } else {
     $('#register-btn').show();
     $('#unregister-btn').hide();
     $('#secret-input').prop('disabled', false);
+    setBadge($('#webhook-status'), 'Not registered', 'secondary');
   }
   
   if (webhookSecret) {
-    $('#verification-enabled').text('✅ Enabled').css('color', 'green');
-    $('#verification-status').css('background-color', '#e8f5e9');
+    setBadge($('#verification-enabled'), 'Enabled', 'success');
+    $('#verification-status')
+      .removeClass('alert-secondary alert-danger')
+      .addClass('alert-success');
   } else {
-    $('#verification-enabled').text('❌ Disabled').css('color', '#666');
-    $('#verification-status').css('background-color', '#f0f0f0');
+    setBadge($('#verification-enabled'), 'Disabled', 'secondary');
+    $('#verification-status')
+      .removeClass('alert-success alert-danger')
+      .addClass('alert-secondary');
   }
 }
 
@@ -57,7 +79,8 @@ if (webhookSecret) {
 }
 
 function clearWebhookEvents() {
-  $('#webhook-events').text('Webhook events cleared. Waiting for new events...');
+  eventHistory = [];
+  $('#webhook-events').html('Webhook events cleared. Waiting for new events...');
   webhookEventCount = 0;
 }
 
@@ -140,6 +163,11 @@ function unregisterWebhook() {
       deleteCookie('webhookSecret');
       $('#secret-input').val('');
       updateButtonStates();
+
+      // Clear event history on unregister.
+      eventHistory = [];
+      $('#webhook-events').html('No webhook events yet');
+      webhookEventCount = 0;
     } else if (data.proxy_status === 'error') {
       statusMessage = '❌ ' + data.proxy_message + '\n';
       statusMessage += 'Details: ' + (data.error || data.details || 'Unknown error') + '\n\n';
@@ -157,12 +185,63 @@ function unregisterWebhook() {
 let eventSource = null;
 let webhookEventCount = 0;
 
+function addSystemLog(message, variant = 'secondary') {
+  const container = document.getElementById('webhook-events');
+  if (!container) return;
+
+  if (
+    container.innerHTML === 'No webhook events yet' ||
+    container.innerHTML.includes('Webhook events cleared')
+  ) {
+    container.innerHTML = '';
+  }
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'mb-3 pb-3 border-bottom';
+
+  const header = document.createElement('div');
+  header.className = `fw-semibold text-${variant}`;
+  header.textContent = message;
+  wrapper.appendChild(header);
+
+  container.insertBefore(wrapper, container.firstChild);
+}
+
+function renderEventToDom(displayEvent) {
+  const container = document.getElementById('webhook-events');
+  if (!container) return;
+
+  const currentContent = container.innerHTML;
+  if (
+    currentContent === 'No webhook events yet' ||
+    currentContent.includes('Webhook events cleared') ||
+    currentContent.includes('Connected')
+  ) {
+    container.innerHTML = '';
+  }
+
+  if (displayEvent.event === 'system') {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'mb-3 pb-3 border-bottom';
+    const header = document.createElement('div');
+    header.className = `fw-semibold text-${displayEvent.data?.variant || 'secondary'}`;
+    header.textContent = displayEvent.data?.message || 'System';
+    wrapper.appendChild(header);
+    container.insertBefore(wrapper, container.firstChild);
+    return;
+  }
+
+  // For webhook/connected events, reuse existing renderer
+  displayWebhookEvent(displayEvent);
+}
+
 function setupEventSource() {
   // Create EventSource connection to receive webhook events
   eventSource = new EventSource('/events');
   
   eventSource.onopen = function(event) {
-    $('#webhook-events').text('Connected to webhook event stream. Waiting for events...');
+    // Connection is implicit; avoid separate SSE vs webhook distinction.
+    addSystemLog('Connected.', 'secondary');
   };
 
   eventSource.onmessage = function(event) {
@@ -175,26 +254,27 @@ function setupEventSource() {
   };
 
   eventSource.addEventListener('webhook', function(event) {
-    try {
-      const data = JSON.parse(event.data);
-      data.event = data.event || 'webhook';
-      displayWebhookEvent(data);
-    } catch (error) {
-      console.error('Error parsing webhook event:', error);
-    }
+    // For named SSE events, `event.data` is the payload string.
+    // Normalize to the same shape used elsewhere: { event, data: <string> }.
+    displayWebhookEvent({
+      id: Date.now(),
+      event: 'webhook',
+      data: event.data,
+      timestamp: new Date().toISOString(),
+    });
   });
 
   eventSource.addEventListener('connected', function(event) {
     displayWebhookEvent({
       event: 'connected',
       data: event.data,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   });
 
   eventSource.onerror = function(event) {
     console.error('SSE error:', event);
-    $('#webhook-events').append('\n[ERROR] Connection lost. Attempting to reconnect...');
+    addSystemLog('Connection lost. Reconnecting…', 'warning');
     
     if (eventSource) {
       eventSource.close();
@@ -210,36 +290,77 @@ function displayWebhookEvent(eventData) {
   webhookEventCount++;
   const timestamp = new Date().toLocaleTimeString();
   
-  // Check if this is a webhook event with verification info
-  let eventHeader = `[${timestamp}] Event #${webhookEventCount} (${eventData.event})`;
-  
-  // Add verification status if present
-  if (eventData.data && typeof eventData.data === 'string') {
+  // Parse event data
+  let parsedData = null;
+  let transactionId = null;
+  let verificationStatus = '';
+
+  // Most events arrive as: { event, data: '<json string>' }
+  // but be defensive in case we ever pass the parsed payload directly.
+  if (typeof eventData?.data === 'string') {
     try {
-      const parsedData = JSON.parse(eventData.data);
-      if (parsedData.verification) {
-        eventHeader += ` - ${parsedData.verification}`;
-      }
+      parsedData = JSON.parse(eventData.data);
     } catch (e) {
-      // Not JSON or no verification field
+      parsedData = null;
     }
+  } else if (eventData && typeof eventData === 'object' && eventData.body) {
+    parsedData = eventData;
+  }
+
+  if (parsedData?.verification) {
+    verificationStatus = ` - ${parsedData.verification}`;
+  }
+
+  const eventType = parsedData?.body?.event_type;
+  if (
+    (eventType === 'transaction_updated' || eventType === 'transaction_confirmed') &&
+    parsedData?.body?.data?.transaction_id
+  ) {
+    transactionId = parsedData.body.data.transaction_id;
   }
   
-  eventHeader += ':';
-  const eventJson = JSON.stringify(eventData, null, 2);
-  const eventDisplay = eventHeader + '\n' + eventJson + '\n\n';
+  // Create event header
+  const eventHeader = `[${timestamp}] Event #${webhookEventCount}`;
   
-  // Append new event to the display
-  const currentContent = $('#webhook-events').text();
-  if (currentContent === 'No webhook events yet' || currentContent === 'Connected to webhook event stream. Waiting for events...') {
-    $('#webhook-events').text(eventDisplay);
-  } else {
-    $('#webhook-events').prepend(eventDisplay);
+  // Create event container
+  const eventDiv = document.createElement('div');
+  eventDiv.className = 'mb-3 pb-3 border-bottom';
+  
+  // Add header
+  const headerDiv = document.createElement('div');
+  headerDiv.className = 'fw-semibold mb-1';
+  headerDiv.textContent = eventHeader;
+  eventDiv.appendChild(headerDiv);
+  
+  // Add transaction link if present
+  if (transactionId) {
+    const linkDiv = document.createElement('div');
+    linkDiv.className = 'mb-2';
+    const link = document.createElement('a');
+    link.href = `/transaction?transaction_id=${encodeURIComponent(transactionId)}`;
+    link.textContent = `View Transaction: ${transactionId}`;
+    link.target = '_blank';
+    link.className = 'link-primary link-underline-opacity-0 link-underline-opacity-100-hover';
+    linkDiv.appendChild(link);
+    eventDiv.appendChild(linkDiv);
   }
   
-  // Scroll to bottom of the pre element
-  const preElement = document.getElementById('webhook-events');
-  preElement.scrollTop = preElement.scrollHeight;
+  // Add JSON data
+  const pre = document.createElement('pre');
+  pre.className = 'm-0 p-2 border rounded bg-body';
+  pre.style.overflowX = 'auto';
+  pre.style.fontSize = '12px';
+  const displayData = parsedData ?? eventData.data;
+  const displayEvent = {
+    ...eventData,
+    data: displayData,
+  };
+  pre.textContent = JSON.stringify(displayEvent, null, 2);
+  eventDiv.appendChild(pre);
+  
+  // Add to container
+  const container = document.getElementById('webhook-events');
+  container.insertBefore(eventDiv, container.firstChild);
 }
 
 // Initialize on page load
