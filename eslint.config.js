@@ -5,6 +5,7 @@
 
 import js from '@eslint/js';
 import globals from 'globals';
+import prettier from 'eslint-config-prettier';
 
 export default [
   js.configs.recommended,
@@ -19,10 +20,6 @@ export default [
       },
     },
     rules: {
-      'indent': ['error', 2],
-      'linebreak-style': ['error', 'unix'],
-      'quotes': ['error', 'single', { avoidEscape: true }],
-      'semi': ['error', 'always'],
       'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       'no-console': 'off',
     },
@@ -39,14 +36,19 @@ export default [
       },
     },
     rules: {
-      'no-unused-vars': ['error', {
-        argsIgnorePattern: '^_',
-        varsIgnorePattern: '^(_|WebhookApp$)',
-      }],
+      'no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^(_|WebhookApp$)',
+        },
+      ],
       'no-redeclare': ['error', { builtinGlobals: false }],
     },
   },
   {
     ignores: ['node_modules/**'],
   },
+  // Prettier must be last to override other configs
+  prettier,
 ];

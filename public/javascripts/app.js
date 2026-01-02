@@ -14,7 +14,8 @@ var WebhookApp = (function ($) {
     set: function (name, value, days) {
       days = days || 365;
       var expires = new Date(Date.now() + days * 864e5).toUTCString();
-      document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/';
+      document.cookie =
+        name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/';
     },
 
     get: function (name) {
@@ -28,7 +29,7 @@ var WebhookApp = (function ($) {
 
     delete: function (name) {
       document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
-    }
+    },
   };
 
   // ============================================================
@@ -43,7 +44,7 @@ var WebhookApp = (function ($) {
       'text-bg-warning',
       'text-bg-info',
       'text-bg-light',
-      'text-bg-dark'
+      'text-bg-dark',
     ],
 
     setBadge: function ($el, text, variant) {
@@ -93,9 +94,11 @@ var WebhookApp = (function ($) {
 
     isPlaceholderContent: function (container) {
       var content = container.textContent;
-      return content === 'No webhook events yet' ||
-             content.indexOf('Webhook events cleared') !== -1 ||
-             content === 'Connected.';
+      return (
+        content === 'No webhook events yet' ||
+        content.indexOf('Webhook events cleared') !== -1 ||
+        content === 'Connected.'
+      );
     },
 
     clearContainer: function (container) {
@@ -107,7 +110,7 @@ var WebhookApp = (function ($) {
     setContainerText: function (container, text) {
       this.clearContainer(container);
       container.textContent = text;
-    }
+    },
   };
 
   // ============================================================
@@ -118,7 +121,7 @@ var WebhookApp = (function ($) {
     webhookId: Cookies.get('webhookId'),
     webhookSecret: Cookies.get('webhookSecret'),
     eventSource: null,
-    eventCount: 0
+    eventCount: 0,
   };
 
   // ============================================================
@@ -147,7 +150,7 @@ var WebhookApp = (function ($) {
           id: Date.now(),
           event: 'webhook',
           data: event.data,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
       });
 
@@ -155,7 +158,7 @@ var WebhookApp = (function ($) {
         SSE.displayWebhookEvent({
           event: 'connected',
           data: event.data,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
       });
 
@@ -212,8 +215,11 @@ var WebhookApp = (function ($) {
       // Extract transaction ID if present
       var eventType = parsedData && parsedData.body && parsedData.body.event_type;
       var transactionId = null;
-      if ((eventType === 'transaction_updated' || eventType === 'transaction_confirmed') &&
-          parsedData.body.data && parsedData.body.data.transaction_id) {
+      if (
+        (eventType === 'transaction_updated' || eventType === 'transaction_confirmed') &&
+        parsedData.body.data &&
+        parsedData.body.data.transaction_id
+      ) {
         transactionId = parsedData.body.data.transaction_id;
       }
 
@@ -272,7 +278,7 @@ var WebhookApp = (function ($) {
         UI.setContainerText(container, 'No webhook events yet');
       }
       State.eventCount = 0;
-    }
+    },
   };
 
   // ============================================================
@@ -286,7 +292,7 @@ var WebhookApp = (function ($) {
       return fetch('/sync_secret', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret: State.webhookSecret })
+        body: JSON.stringify({ secret: State.webhookSecret }),
       })
         .then(function () {
           console.log('Secret synced to server');
@@ -310,7 +316,7 @@ var WebhookApp = (function ($) {
 
       // Build request body
       var requestBody = {
-        url: 'http://localhost:3000/sage_hook'
+        url: 'http://localhost:3000/sage_hook',
       };
 
       if (State.webhookSecret) {
@@ -320,7 +326,7 @@ var WebhookApp = (function ($) {
       fetch('/proxy/register_webhook', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
       })
         .then(function (response) {
           return response.json();
@@ -341,7 +347,9 @@ var WebhookApp = (function ($) {
 
     unregister: function () {
       if (!State.webhookId) {
-        $('#response-display').text('Error: No webhook_id available. Please register a webhook first.');
+        $('#response-display').text(
+          'Error: No webhook_id available. Please register a webhook first.'
+        );
         return;
       }
 
@@ -350,13 +358,13 @@ var WebhookApp = (function ($) {
       fetch('/proxy/unregister_webhook', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ webhook_id: State.webhookId })
+        body: JSON.stringify({ webhook_id: State.webhookId }),
       })
         .then(function (response) {
           return response.json();
         })
         .then(function (data) {
-        // Always reset client state when unregistering
+          // Always reset client state when unregistering
           State.webhookId = null;
           State.webhookSecret = null;
           Cookies.delete('webhookId');
@@ -378,7 +386,7 @@ var WebhookApp = (function ($) {
           SSE.reset();
           $('#response-display').text('❌ Network Error: ' + error.message);
         });
-    }
+    },
   };
 
   // ============================================================
@@ -413,7 +421,6 @@ var WebhookApp = (function ($) {
   return {
     register: API.register,
     unregister: API.unregister,
-    clearEvents: SSE.clear
+    clearEvents: SSE.clear,
   };
-
 })(jQuery);

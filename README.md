@@ -32,7 +32,7 @@ CLIENT_KEY_PATH=/path/to/client-key.pem
 # Option 2: Use certificate content directly
 CLIENT_CERT="-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----"
 CLIENT_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
-   ```
+```
 
 4. **Configure webhook server settings:**
 
@@ -40,9 +40,9 @@ By default, the proxy connects to `localhost:9257`. Update the hostname and port
 
 ```javascript
 const options = {
-    hostname: 'localhost',
-    port: 9257,
-    // ...
+  hostname: 'localhost',
+  port: 9257,
+  // ...
 };
 ```
 
