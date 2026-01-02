@@ -33,6 +33,7 @@ export default [
         ...globals.browser,
         ...globals.jquery,
         WebhookApp: 'writable',
+        bootstrap: 'readonly',
       },
     },
     rules: {
@@ -41,6 +42,7 @@ export default [
         {
           argsIgnorePattern: '^_',
           varsIgnorePattern: '^(_|WebhookApp$)',
+          caughtErrorsIgnorePattern: '^_',
         },
       ],
       'no-redeclare': ['error', { builtinGlobals: false }],

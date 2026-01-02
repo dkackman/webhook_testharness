@@ -1,10 +1,19 @@
 /**
  * Webhook Test Harness - Client Application
- * Consolidated module using revealing module pattern
+ * Developer-focused webhook testing tool
  */
 
 var WebhookApp = (function ($) {
   'use strict';
+
+  // ============================================================
+  // Configuration
+  // ============================================================
+
+  var CONFIG = {
+    WEBHOOK_URL: 'http://localhost:3000/sage_hook',
+    RECONNECT_DELAY: 3000,
+  };
 
   // ============================================================
   // Cookie Utilities
@@ -33,87 +42,6 @@ var WebhookApp = (function ($) {
   };
 
   // ============================================================
-  // UI Helpers
-  // ============================================================
-
-  var UI = {
-    BADGE_VARIANTS: [
-      'text-bg-secondary',
-      'text-bg-success',
-      'text-bg-danger',
-      'text-bg-warning',
-      'text-bg-info',
-      'text-bg-light',
-      'text-bg-dark',
-    ],
-
-    setBadge: function ($el, text, variant) {
-      this.BADGE_VARIANTS.forEach(function (v) {
-        $el.removeClass(v);
-      });
-      $el.addClass('text-bg-' + variant).text(text);
-    },
-
-    updateButtonStates: function () {
-      if (State.webhookId) {
-        $('#register-btn').hide();
-        $('#unregister-btn').show();
-        $('#secret-input').prop('disabled', true);
-        $('#response-display').text('Webhook registered (ID: ' + State.webhookId + ')');
-        this.setBadge($('#webhook-status'), 'Registered', 'success');
-      } else {
-        $('#register-btn').show();
-        $('#unregister-btn').hide();
-        $('#secret-input').prop('disabled', false);
-        this.setBadge($('#webhook-status'), 'Not registered', 'secondary');
-      }
-
-      if (State.webhookSecret) {
-        this.setBadge($('#verification-enabled'), 'Enabled', 'success');
-        $('#verification-status')
-          .removeClass('alert-secondary alert-danger')
-          .addClass('alert-success');
-      } else {
-        this.setBadge($('#verification-enabled'), 'Disabled', 'secondary');
-        $('#verification-status')
-          .removeClass('alert-success alert-danger')
-          .addClass('alert-secondary');
-      }
-    },
-
-    handleProxyResponse: function (data) {
-      var statusMessage = '';
-      if (data.proxy_status === 'success') {
-        statusMessage = '✅ ' + data.proxy_message + '\n\n';
-      } else if (data.proxy_status === 'error') {
-        statusMessage = '❌ ' + data.proxy_message + '\n';
-        statusMessage += 'Details: ' + (data.error || data.details || 'Unknown error') + '\n\n';
-      }
-      return statusMessage + JSON.stringify(data, null, 2);
-    },
-
-    isPlaceholderContent: function (container) {
-      var content = container.textContent;
-      return (
-        content === 'No webhook events yet' ||
-        content.indexOf('Webhook events cleared') !== -1 ||
-        content === 'Connected.'
-      );
-    },
-
-    clearContainer: function (container) {
-      while (container.firstChild) {
-        container.removeChild(container.firstChild);
-      }
-    },
-
-    setContainerText: function (container, text) {
-      this.clearContainer(container);
-      container.textContent = text;
-    },
-  };
-
-  // ============================================================
   // State Management
   // ============================================================
 
@@ -122,99 +50,225 @@ var WebhookApp = (function ($) {
     webhookSecret: Cookies.get('webhookSecret'),
     eventSource: null,
     eventCount: 0,
+    isPaused: false,
+    currentFilter: 'all',
+    events: [], // Store events for filtering
   };
 
   // ============================================================
-  // Server-Sent Events
+  // UI Helpers
   // ============================================================
 
-  var SSE = {
-    setup: function () {
-      State.eventSource = new EventSource('/events');
+  var UI = {
+    updateConnectionStatus: function (status) {
+      var $el = $('#connection-status');
+      $el.removeClass('text-bg-warning text-bg-success text-bg-danger connected disconnected');
 
-      State.eventSource.onopen = function () {
-        SSE.addSystemLog('Connected.', 'secondary');
-      };
-
-      State.eventSource.onmessage = function (event) {
-        try {
-          var data = JSON.parse(event.data);
-          SSE.displayWebhookEvent(data);
-        } catch (error) {
-          console.error('Error parsing SSE data:', error);
-        }
-      };
-
-      State.eventSource.addEventListener('webhook', function (event) {
-        SSE.displayWebhookEvent({
-          id: Date.now(),
-          event: 'webhook',
-          data: event.data,
-          timestamp: new Date().toISOString(),
-        });
-      });
-
-      State.eventSource.addEventListener('connected', function (event) {
-        SSE.displayWebhookEvent({
-          event: 'connected',
-          data: event.data,
-          timestamp: new Date().toISOString(),
-        });
-      });
-
-      State.eventSource.onerror = function (event) {
-        console.error('SSE error:', event);
-        SSE.addSystemLog('Connection lost. Reconnecting…', 'warning');
-
-        if (State.eventSource) {
-          State.eventSource.close();
-        }
-
-        setTimeout(function () {
-          SSE.setup();
-        }, 3000);
-      };
+      if (status === 'connected') {
+        $el.addClass('text-bg-success connected').html('<i class="bi bi-wifi me-1"></i>Connected');
+      } else if (status === 'connecting') {
+        $el
+          .addClass('text-bg-warning')
+          .html(
+            '<span class="spinner-grow spinner-grow-sm me-1" role="status"></span>Connecting...'
+          );
+      } else {
+        $el
+          .addClass('text-bg-danger disconnected')
+          .html('<i class="bi bi-wifi-off me-1"></i>Disconnected');
+      }
     },
 
-    addSystemLog: function (message, variant) {
-      variant = variant || 'secondary';
-      var container = document.getElementById('webhook-events');
-      if (!container) return;
+    updateEventCounter: function () {
+      $('#event-counter').text(State.eventCount + ' event' + (State.eventCount !== 1 ? 's' : ''));
+    },
 
-      if (UI.isPlaceholderContent(container)) {
-        UI.clearContainer(container);
+    updateButtonStates: function () {
+      var $panel = $('#setup-panel');
+
+      if (State.webhookId) {
+        $('#register-btn').hide();
+        $('#unregister-btn').show();
+        $('#secret-input').prop('disabled', true);
+        $('#response-status').text('Registered: ' + State.webhookId);
+        $('#webhook-status')
+          .removeClass('text-bg-secondary')
+          .addClass('text-bg-success')
+          .text('Registered');
+        $panel.addClass('registered');
+
+        // Auto-collapse setup panel
+        var collapse = bootstrap.Collapse.getOrCreateInstance($('#setup-body')[0]);
+        collapse.hide();
+      } else {
+        $('#register-btn').show();
+        $('#unregister-btn').hide();
+        $('#secret-input').prop('disabled', false);
+        $('#webhook-status')
+          .removeClass('text-bg-success')
+          .addClass('text-bg-secondary')
+          .text('Not registered');
+        $panel.removeClass('registered');
       }
 
-      var wrapper = document.createElement('div');
-      wrapper.className = 'mb-3 pb-3 border-bottom';
-
-      var header = document.createElement('div');
-      header.className = 'fw-semibold text-' + variant;
-      header.textContent = message;
-      wrapper.appendChild(header);
-
-      container.insertBefore(wrapper, container.firstChild);
+      // HMAC badge
+      if (State.webhookSecret) {
+        $('#hmac-badge')
+          .removeClass('text-bg-secondary')
+          .addClass('text-bg-success')
+          .text('HMAC: On');
+      } else {
+        $('#hmac-badge')
+          .removeClass('text-bg-success')
+          .addClass('text-bg-secondary')
+          .text('HMAC: Off');
+      }
     },
 
-    displayWebhookEvent: function (eventData) {
-      State.eventCount++;
-      var timestamp = new Date().toLocaleTimeString();
+    togglePause: function () {
+      State.isPaused = !State.isPaused;
+      var $btn = $('#pause-btn');
 
-      // Parse event data if it's a string
+      if (State.isPaused) {
+        $btn
+          .addClass('paused')
+          .html('<i class="bi bi-play-fill"></i>')
+          .attr('title', 'Resume event capture');
+      } else {
+        $btn
+          .removeClass('paused')
+          .html('<i class="bi bi-pause-fill"></i>')
+          .attr('title', 'Pause event capture');
+      }
+    },
+
+    copyToClipboard: function (text, $button) {
+      navigator.clipboard.writeText(text).then(function () {
+        var $icon = $button.find('i');
+        var originalClass = $icon.attr('class');
+        $icon.attr('class', 'bi bi-check copy-success');
+        setTimeout(function () {
+          $icon.attr('class', originalClass);
+        }, 1500);
+      });
+    },
+
+    clearPlaceholder: function () {
+      var $placeholder = $('#webhook-events .event-placeholder');
+      if ($placeholder.length) {
+        $placeholder.remove();
+      }
+    },
+
+    showPlaceholder: function () {
+      var container = document.getElementById('webhook-events');
+      container.innerHTML =
+        '<div class="event-placeholder text-center text-muted py-5">' +
+        '<i class="bi bi-inbox d-block fs-1 mb-2"></i>' +
+        'Waiting for webhook events...' +
+        '</div>';
+    },
+
+    applyFilter: function (filter) {
+      State.currentFilter = filter;
+      $('.filter-btn').removeClass('active');
+      $('.filter-btn[data-filter="' + filter + '"]').addClass('active');
+
+      $('.event-item').each(function () {
+        var $item = $(this);
+        var isSystem = $item.hasClass('system-event');
+
+        if (filter === 'all') {
+          $item.show();
+        } else if (filter === 'webhook') {
+          $item.toggle(!isSystem);
+        } else if (filter === 'system') {
+          $item.toggle(isSystem);
+        }
+      });
+    },
+  };
+
+  // ============================================================
+  // Event Display
+  // ============================================================
+
+  var Events = {
+    getEventTypeBadge: function (eventType) {
+      var badges = {
+        transaction_updated: { text: 'TX Updated', class: 'text-bg-info' },
+        transaction_confirmed: { text: 'TX Confirmed', class: 'text-bg-success' },
+        wallet_sync: { text: 'Wallet Sync', class: 'text-bg-primary' },
+      };
+      return badges[eventType] || { text: eventType || 'Event', class: 'text-bg-secondary' };
+    },
+
+    getVerificationBadge: function (status) {
+      if (!status || status === 'No signature required') {
+        return { text: 'No HMAC', class: 'text-bg-secondary' };
+      }
+      if (status.includes('VERIFIED')) {
+        return { text: 'Verified', class: 'text-bg-success' };
+      }
+      return { text: 'Failed', class: 'text-bg-danger' };
+    },
+
+    formatTime: function (date) {
+      return date.toLocaleTimeString('en-US', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        fractionalSecondDigits: 3,
+      });
+    },
+
+    syntaxHighlight: function (json) {
+      if (typeof json !== 'string') {
+        json = JSON.stringify(json, null, 2);
+      }
+      return json
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(
+          /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g,
+          function (match) {
+            var cls = 'json-number';
+            if (/^"/.test(match)) {
+              if (/:$/.test(match)) {
+                cls = 'json-key';
+                match = match.slice(0, -1) + '</span>:';
+                return '<span class="' + cls + '">' + match;
+              } else {
+                cls = 'json-string';
+              }
+            } else if (/true|false/.test(match)) {
+              cls = 'json-boolean';
+            } else if (/null/.test(match)) {
+              cls = 'json-null';
+            }
+            return '<span class="' + cls + '">' + match + '</span>';
+          }
+        );
+    },
+
+    createEventElement: function (eventData) {
       var parsedData = null;
       if (eventData && typeof eventData.data === 'string') {
         try {
           parsedData = JSON.parse(eventData.data);
-        } catch {
+        } catch (_e) {
           parsedData = null;
         }
       } else if (eventData && eventData.body) {
         parsedData = eventData;
       }
 
-      // Extract transaction ID if present
       var eventType = parsedData && parsedData.body && parsedData.body.event_type;
+      var verification = parsedData && parsedData.verification;
       var transactionId = null;
+
       if (
         (eventType === 'transaction_updated' || eventType === 'transaction_confirmed') &&
         parsedData.body.data &&
@@ -223,66 +277,157 @@ var WebhookApp = (function ($) {
         transactionId = parsedData.body.data.transaction_id;
       }
 
-      // Create event container
-      var eventDiv = document.createElement('div');
-      eventDiv.className = 'mb-3 pb-3 border-bottom';
+      var typeBadge = this.getEventTypeBadge(eventType);
+      var verifyBadge = this.getVerificationBadge(verification);
+      var timestamp = this.formatTime(new Date());
+      var eventId = 'event-' + Date.now();
 
-      // Add header
-      var headerDiv = document.createElement('div');
-      headerDiv.className = 'fw-semibold mb-1';
-      headerDiv.textContent = '[' + timestamp + '] Event #' + State.eventCount;
-      eventDiv.appendChild(headerDiv);
-
-      // Add transaction link if present
-      if (transactionId) {
-        var linkDiv = document.createElement('div');
-        linkDiv.className = 'mb-2';
-        var link = document.createElement('a');
-        link.href = '/transaction?transaction_id=' + encodeURIComponent(transactionId);
-        link.textContent = 'View Transaction: ' + transactionId;
-        link.target = '_blank';
-        link.className = 'link-primary link-underline-opacity-0 link-underline-opacity-100-hover';
-        linkDiv.appendChild(link);
-        eventDiv.appendChild(linkDiv);
-      }
-
-      // Add JSON data
-      var pre = document.createElement('pre');
-      pre.className = 'm-0 p-2 border rounded bg-body';
-      pre.style.overflowX = 'auto';
-      pre.style.fontSize = '12px';
       var displayData = parsedData || eventData.data;
-      var displayEvent = Object.assign({}, eventData, { data: displayData });
-      pre.textContent = JSON.stringify(displayEvent, null, 2);
-      eventDiv.appendChild(pre);
+      var jsonString = JSON.stringify(displayData, null, 2);
+      var summary = eventType
+        ? eventType + (transactionId ? ': ' + transactionId.substring(0, 16) + '...' : '')
+        : 'Webhook received';
 
-      // Add to container
-      var container = document.getElementById('webhook-events');
-      if (UI.isPlaceholderContent(container)) {
-        UI.clearContainer(container);
+      var html =
+        '<div class="event-item" data-event-id="' +
+        eventId +
+        '">' +
+        '  <div class="event-header">' +
+        '    <div class="event-meta">' +
+        '      <span class="event-time">' +
+        timestamp +
+        '</span>' +
+        '      <span class="badge event-type-badge ' +
+        typeBadge.class +
+        '">' +
+        typeBadge.text +
+        '</span>' +
+        '      <span class="badge verification-badge ' +
+        verifyBadge.class +
+        '">' +
+        verifyBadge.text +
+        '</span>' +
+        (transactionId
+          ? '      <a href="/transaction?transaction_id=' +
+            encodeURIComponent(transactionId) +
+            '" target="_blank" class="transaction-link"><i class="bi bi-box-arrow-up-right"></i>' +
+            transactionId.substring(0, 12) +
+            '...</a>'
+          : '') +
+        '    </div>' +
+        '    <div class="event-actions">' +
+        '      <button class="btn-action" onclick="WebhookApp.copyEvent(\'' +
+        eventId +
+        '\')" title="Copy JSON">' +
+        '        <i class="bi bi-clipboard"></i>' +
+        '      </button>' +
+        '      <button class="btn-action" onclick="WebhookApp.toggleDetails(\'' +
+        eventId +
+        '\')" title="Toggle details">' +
+        '        <i class="bi bi-code-slash"></i>' +
+        '      </button>' +
+        '    </div>' +
+        '  </div>' +
+        '  <div class="event-summary">' +
+        summary +
+        '</div>' +
+        '  <pre class="event-details collapse" id="' +
+        eventId +
+        '-details">' +
+        this.syntaxHighlight(jsonString) +
+        '  </pre>' +
+        '</div>';
+
+      // Store raw JSON for copy
+      var el = $(html);
+      el.data('json', jsonString);
+
+      return el;
+    },
+
+    addSystemEvent: function (message, variant) {
+      variant = variant || 'secondary';
+      UI.clearPlaceholder();
+
+      var html =
+        '<div class="event-item system-event">' +
+        '  <div class="event-summary text-' +
+        variant +
+        '">' +
+        '    <i class="bi bi-info-circle me-1"></i>' +
+        message +
+        '  </div>' +
+        '</div>';
+
+      $('#webhook-events').prepend(html);
+    },
+
+    addWebhookEvent: function (eventData) {
+      if (State.isPaused) return;
+
+      State.eventCount++;
+      UI.updateEventCounter();
+      UI.clearPlaceholder();
+
+      var $el = this.createEventElement(eventData);
+      State.events.push({ el: $el, data: eventData });
+
+      $('#webhook-events').prepend($el);
+
+      // Apply current filter
+      if (State.currentFilter !== 'all') {
+        UI.applyFilter(State.currentFilter);
       }
-      container.insertBefore(eventDiv, container.firstChild);
     },
 
     clear: function () {
-      var container = document.getElementById('webhook-events');
-      if (container) {
-        UI.setContainerText(container, 'Webhook events cleared. Waiting for new events...');
-      }
+      State.events = [];
       State.eventCount = 0;
-    },
-
-    reset: function () {
-      var container = document.getElementById('webhook-events');
-      if (container) {
-        UI.setContainerText(container, 'No webhook events yet');
-      }
-      State.eventCount = 0;
+      UI.updateEventCounter();
+      UI.showPlaceholder();
     },
   };
 
   // ============================================================
-  // Webhook API
+  // Server-Sent Events
+  // ============================================================
+
+  var SSE = {
+    setup: function () {
+      UI.updateConnectionStatus('connecting');
+      State.eventSource = new EventSource('/events');
+
+      State.eventSource.onopen = function () {
+        UI.updateConnectionStatus('connected');
+        Events.addSystemEvent('Connected to event stream', 'success');
+      };
+
+      State.eventSource.addEventListener('webhook', function (event) {
+        Events.addWebhookEvent({
+          id: Date.now(),
+          event: 'webhook',
+          data: event.data,
+          timestamp: new Date().toISOString(),
+        });
+      });
+
+      State.eventSource.onerror = function () {
+        UI.updateConnectionStatus('disconnected');
+        Events.addSystemEvent('Connection lost. Reconnecting...', 'warning');
+
+        if (State.eventSource) {
+          State.eventSource.close();
+        }
+
+        setTimeout(function () {
+          SSE.setup();
+        }, CONFIG.RECONNECT_DELAY);
+      };
+    },
+  };
+
+  // ============================================================
+  // API
   // ============================================================
 
   var API = {
@@ -293,17 +438,14 @@ var WebhookApp = (function ($) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ secret: State.webhookSecret }),
-      })
-        .then(function () {
-          console.log('Secret synced to server');
-        })
-        .catch(function (err) {
-          console.error('Failed to sync secret:', err);
-        });
+      }).catch(function (err) {
+        console.error('Failed to sync secret:', err);
+      });
     },
 
     register: function () {
-      SSE.clear();
+      Events.clear();
+      $('#response-status').text('Registering...');
 
       var secret = $('#secret-input').val().trim();
       State.webhookSecret = secret || null;
@@ -314,11 +456,7 @@ var WebhookApp = (function ($) {
         Cookies.delete('webhookSecret');
       }
 
-      // Build request body
-      var requestBody = {
-        url: 'http://localhost:3000/sage_hook',
-      };
-
+      var requestBody = { url: CONFIG.WEBHOOK_URL };
       if (State.webhookSecret) {
         requestBody.secret = State.webhookSecret;
       }
@@ -336,24 +474,20 @@ var WebhookApp = (function ($) {
             State.webhookId = data.webhook_id;
             Cookies.set('webhookId', State.webhookId);
             UI.updateButtonStates();
+            Events.addSystemEvent('Webhook registered successfully', 'success');
+          } else {
+            $('#response-status').text('Error: ' + (data.error || data.proxy_message));
           }
-          $('#response-display').text(UI.handleProxyResponse(data));
         })
         .catch(function (error) {
-          console.error('Error:', error);
-          $('#response-display').text('❌ Network Error: ' + error.message);
+          $('#response-status').text('Network error: ' + error.message);
         });
     },
 
     unregister: function () {
-      if (!State.webhookId) {
-        $('#response-display').text(
-          'Error: No webhook_id available. Please register a webhook first.'
-        );
-        return;
-      }
+      if (!State.webhookId) return;
 
-      SSE.clear();
+      $('#response-status').text('Unregistering...');
 
       fetch('/proxy/unregister_webhook', {
         method: 'POST',
@@ -363,28 +497,19 @@ var WebhookApp = (function ($) {
         .then(function (response) {
           return response.json();
         })
-        .then(function (data) {
-          // Always reset client state when unregistering
+        .then(function () {
           State.webhookId = null;
           State.webhookSecret = null;
           Cookies.delete('webhookId');
           Cookies.delete('webhookSecret');
           $('#secret-input').val('');
           UI.updateButtonStates();
-          SSE.reset();
-          $('#response-display').text(UI.handleProxyResponse(data));
+          Events.clear();
+          $('#response-status').text('Ready');
+          Events.addSystemEvent('Webhook unregistered', 'secondary');
         })
         .catch(function (error) {
-          console.error('Error:', error);
-          // Reset state even on network error
-          State.webhookId = null;
-          State.webhookSecret = null;
-          Cookies.delete('webhookId');
-          Cookies.delete('webhookSecret');
-          $('#secret-input').val('');
-          UI.updateButtonStates();
-          SSE.reset();
-          $('#response-display').text('❌ Network Error: ' + error.message);
+          $('#response-status').text('Error: ' + error.message);
         });
     },
   };
@@ -394,20 +519,38 @@ var WebhookApp = (function ($) {
   // ============================================================
 
   function init() {
-    // Sync secret to server on page load if it exists
+    // Restore state
     if (State.webhookSecret) {
       $('#secret-input').val(State.webhookSecret);
       API.syncSecret();
     }
 
     UI.updateButtonStates();
+    UI.updateEventCounter();
     SSE.setup();
+
+    // Event handlers
+    $('#pause-btn').on('click', UI.togglePause);
+
+    $('.filter-btn').on('click', function () {
+      UI.applyFilter($(this).data('filter'));
+    });
+
+    $('#toggle-secret').on('click', function () {
+      var $input = $('#secret-input');
+      var $icon = $(this).find('i');
+      if ($input.attr('type') === 'password') {
+        $input.attr('type', 'text');
+        $icon.removeClass('bi-eye').addClass('bi-eye-slash');
+      } else {
+        $input.attr('type', 'password');
+        $icon.removeClass('bi-eye-slash').addClass('bi-eye');
+      }
+    });
   }
 
-  // Initialize on document ready
   $(document).ready(init);
 
-  // Clean up EventSource on page unload
   $(window).on('beforeunload', function () {
     if (State.eventSource) {
       State.eventSource.close();
@@ -421,6 +564,23 @@ var WebhookApp = (function ($) {
   return {
     register: API.register,
     unregister: API.unregister,
-    clearEvents: SSE.clear,
+    clearEvents: Events.clear,
+
+    copyUrl: function () {
+      UI.copyToClipboard(CONFIG.WEBHOOK_URL, $('[onclick="WebhookApp.copyUrl()"]'));
+    },
+
+    copyEvent: function (eventId) {
+      var $item = $('[data-event-id="' + eventId + '"]');
+      var json = $item.data('json');
+      UI.copyToClipboard(json, $item.find('.btn-action').first());
+    },
+
+    toggleDetails: function (eventId) {
+      var $details = $('#' + eventId + '-details');
+      $details.collapse('toggle');
+    },
+
+    togglePause: UI.togglePause,
   };
 })(jQuery);

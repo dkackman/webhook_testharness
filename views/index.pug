@@ -1,43 +1,92 @@
 extends layout
 
-include mixins/card
-include mixins/form
-include mixins/alert
-
 block content
   .container-fluid
+    //- Header with status indicators
     .d-flex.align-items-center.justify-content-between.mb-3
-      h2.mb-0= title
-      .d-flex.gap-2.align-items-center
+      .d-flex.align-items-center.gap-3
+        h4.mb-0= title
         span.badge.text-bg-secondary#webhook-status Not registered
+        span.badge#connection-status.text-bg-warning
+          span.spinner-grow.spinner-grow-sm.me-1(role="status")
+          | Connecting...
 
-    .row.g-3
-      //- Live Events Panel
-      .col-lg-8
-        .card
-          +cardHeader('Live Webhook Events')
-            button.btn.btn-sm.btn-outline-secondary(type="button" onclick="WebhookApp.clearEvents()") Clear
-          +cardBody.p-0
-            #webhook-events.log-panel.font-monospace.small No webhook events yet
+      .d-flex.gap-2.align-items-center
+        span#event-counter.text-muted.small 0 events
+        button.btn.btn-sm.btn-outline-secondary#pause-btn(type="button" title="Pause event capture")
+          i.bi.bi-pause-fill
+        button.btn.btn-sm.btn-outline-secondary(type="button" onclick="WebhookApp.clearEvents()" title="Clear events") Clear
 
-      //- Setup Panel
-      .col-lg-4
-        //- Webhook Setup Card
-        .card.mb-3
-          +cardHeaderSimple('Webhook Setup')
-          +cardBody
-            +formInput('Webhook Secret (optional)', 'secret-input', 'Enter secret for HMAC verification', 'If provided, webhooks will be signed with HMAC-SHA256.')
+    //- Collapsible Setup Panel
+    .card.mb-3#setup-panel
+      .card-header.d-flex.align-items-center.justify-content-between(
+        style="cursor: pointer"
+        data-bs-toggle="collapse"
+        data-bs-target="#setup-body"
+        aria-expanded="true"
+      )
+        .d-flex.align-items-center.gap-2
+          span.fw-semibold Webhook Setup
+          span.badge.text-bg-secondary#hmac-badge HMAC: Off
+        .d-flex.align-items-center.gap-2
+          span#webhook-url.text-muted.small.d-none
+          i.bi.bi-chevron-down.transition-transform#setup-chevron
 
-            +buttonGroup.mt-3
-              button#register-btn.btn.btn-primary(type="button" onclick="WebhookApp.register()") Register
-              button#unregister-btn.btn.btn-outline-danger(type="button" onclick="WebhookApp.unregister()" style="display: none;") Unregister
+      #setup-body.collapse.show
+        .card-body
+          .row.g-3
+            .col-md-6
+              label.form-label.small.fw-semibold(for="secret-input") Webhook Secret
+              .input-group
+                input#secret-input.form-control.form-control-sm.font-monospace(
+                  type="text"
+                  placeholder="Optional HMAC-SHA256 secret"
+                )
+                button.btn.btn-sm.btn-outline-secondary#toggle-secret(type="button" title="Toggle visibility")
+                  i.bi.bi-eye
 
-            +statusAlert('verification-status', 'HMAC Verification', 'verification-enabled', 'Disabled', 'secondary').mt-3
+              .form-text If provided, incoming webhooks will be verified with HMAC-SHA256.
 
-        //- Registration Response Card
-        .card
-          +cardHeaderSimple('Registration Response')
-          +cardBody.p-0
-            pre#response-display.log-panel-sm.font-monospace.small.m-0.p-3 Hook not registered
+            .col-md-6
+              label.form-label.small.fw-semibold Webhook URL
+              .input-group
+                input.form-control.form-control-sm.font-monospace(
+                  type="text"
+                  value="http://localhost:3000/sage_hook"
+                  readonly
+                  id="hook-url"
+                )
+                button.btn.btn-sm.btn-outline-secondary(type="button" onclick="WebhookApp.copyUrl()" title="Copy URL")
+                  i.bi.bi-clipboard
+
+          .d-flex.justify-content-between.align-items-center.mt-3
+            .d-flex.gap-2
+              button#register-btn.btn.btn-primary.btn-sm(type="button" onclick="WebhookApp.register()") Register Webhook
+              button#unregister-btn.btn.btn-outline-danger.btn-sm(type="button" onclick="WebhookApp.unregister()" style="display: none;") Unregister
+
+            pre#response-status.mb-0.small.text-muted.text-end Ready
+
+    //- Event Stream (main focus)
+    .card
+      .card-header.d-flex.align-items-center.justify-content-between.py-2
+        .d-flex.align-items-center.gap-2
+          span.fw-semibold Live Events
+        .d-flex.gap-1
+          button.btn.btn-sm.px-2.py-0.filter-btn.active(data-filter="all" title="All events") All
+          button.btn.btn-sm.px-2.py-0.filter-btn(data-filter="webhook" title="Webhook events only") Webhooks
+          button.btn.btn-sm.px-2.py-0.filter-btn(data-filter="system" title="System messages only") System
+
+      #webhook-events.event-stream
+        .event-placeholder.text-center.text-muted.py-5
+          i.bi.bi-inbox.d-block.fs-1.mb-2
+          | Waiting for webhook events...
+          br
+          small Register a webhook to start receiving events.
+
+  //- Bootstrap Icons
+  link(rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css")
+
+  //- Bootstrap JS for collapse
+  script(src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js")
 
   script(src='/javascripts/app.js')
