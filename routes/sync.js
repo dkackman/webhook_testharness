@@ -3,9 +3,10 @@
  * Syncs webhook secret from browser to server memory
  */
 
-const express = require('express');
-const router = express.Router();
-const webhookState = require('../services/webhook-state');
+import { Router } from 'express';
+import * as webhookState from '../services/webhook-state.js';
+
+const router = Router();
 
 /**
  * POST /sync_secret
@@ -24,4 +25,4 @@ router.post('/', (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

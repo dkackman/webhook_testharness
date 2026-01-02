@@ -3,10 +3,11 @@
  * Receives and processes incoming webhook events from Sage
  */
 
-const express = require('express');
-const router = express.Router();
-const { verifySignature } = require('../middleware/hmac-verify');
-const sseManager = require('../services/sse-manager');
+import express, { Router } from 'express';
+import { verifySignature } from '../middleware/hmac-verify.js';
+import sseManager from '../services/sse-manager.js';
+
+const router = Router();
 
 /**
  * POST /sage_hook
@@ -56,4 +57,4 @@ router.post(
   }
 );
 
-module.exports = router;
+export default router;

@@ -3,9 +3,10 @@
  * Provides real-time webhook event streaming to clients
  */
 
-const express = require('express');
-const router = express.Router();
-const sseManager = require('../services/sse-manager');
+import { Router } from 'express';
+import sseManager from '../services/sse-manager.js';
+
+const router = Router();
 
 /**
  * GET /events
@@ -30,4 +31,4 @@ router.get('/', (req, res) => {
   });
 });
 
-module.exports = router;
+export default router;

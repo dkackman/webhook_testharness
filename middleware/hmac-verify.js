@@ -3,8 +3,8 @@
  * Verifies webhook signatures using HMAC-SHA256
  */
 
-const crypto = require('crypto');
-const webhookState = require('../services/webhook-state');
+import crypto from 'node:crypto';
+import * as webhookState from '../services/webhook-state.js';
 
 /**
  * Verification result object
@@ -19,7 +19,7 @@ const webhookState = require('../services/webhook-state');
  * @param {string} signature - Signature header value (format: "sha256=<hex>")
  * @returns {VerificationResult} Verification result
  */
-function verifySignature(body, signature) {
+export function verifySignature(body, signature) {
   const secret = webhookState.getSecret();
 
   // No secret configured - verification not required
@@ -76,7 +76,3 @@ function verifySignature(body, signature) {
     status: '❌ FAILED: Signature mismatch',
   };
 }
-
-module.exports = {
-  verifySignature,
-};

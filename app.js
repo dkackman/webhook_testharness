@@ -3,20 +3,25 @@
  * Configures middleware, routes, and error handling
  */
 
-const express = require('express');
-const path = require('path');
-const cookieParser = require('cookie-parser');
-const logger = require('morgan');
+import express from 'express';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import cookieParser from 'cookie-parser';
+import logger from 'morgan';
 
 // Import routes
-const indexRouter = require('./routes/index');
-const proxyRouter = require('./routes/proxy');
-const webhookRouter = require('./routes/webhook');
-const eventsRouter = require('./routes/events');
-const syncRouter = require('./routes/sync');
+import indexRouter from './routes/index.js';
+import proxyRouter from './routes/proxy.js';
+import webhookRouter from './routes/webhook.js';
+import eventsRouter from './routes/events.js';
+import syncRouter from './routes/sync.js';
 
 // Import error handlers
-const { notFoundHandler, errorHandler } = require('./middleware/error-handler');
+import { notFoundHandler, errorHandler } from './middleware/error-handler.js';
+
+// ES module __dirname equivalent
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Create Express app
 const app = express();
@@ -55,4 +60,4 @@ app.use('/events', eventsRouter);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-module.exports = app;
+export default app;

@@ -5,35 +5,33 @@
 
 let webhookSecret = null;
 
-module.exports = {
-  /**
-   * Get the current webhook secret
-   * @returns {string|null} Current secret or null if not set
-   */
-  getSecret() {
-    return webhookSecret;
-  },
+/**
+ * Get the current webhook secret
+ * @returns {string|null} Current secret or null if not set
+ */
+export function getSecret() {
+  return webhookSecret;
+}
 
-  /**
-   * Set the webhook secret
-   * @param {string|null} secret - Secret to set, or null to clear
-   */
-  setSecret(secret) {
-    webhookSecret = secret || null;
-  },
+/**
+ * Set the webhook secret
+ * @param {string|null} secret - Secret to set, or null to clear
+ */
+export function setSecret(secret) {
+  webhookSecret = secret || null;
+}
 
-  /**
-   * Check if a secret is configured
-   * @returns {boolean} True if secret is set
-   */
-  hasSecret() {
-    return webhookSecret !== null;
-  },
+/**
+ * Check if a secret is configured
+ * @returns {boolean} True if secret is set
+ */
+export function hasSecret() {
+  return webhookSecret !== null;
+}
 
-  /**
-   * Clear the webhook secret
-   */
-  clearSecret() {
-    webhookSecret = null;
-  },
-};
+/**
+ * Clear the webhook secret
+ */
+export function clearSecret() {
+  webhookSecret = null;
+}

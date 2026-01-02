@@ -3,16 +3,16 @@
  * Handles secure communication with the Sage wallet backend
  */
 
-const https = require('https');
-const fs = require('fs');
-const config = require('../config');
+import https from 'node:https';
+import fs from 'node:fs';
+import config from '../config/index.js';
 
 /**
  * Creates an HTTPS agent configured with mTLS certificates
  * @returns {https.Agent} Configured HTTPS agent
  * @throws {Error} If certificate configuration is missing or invalid
  */
-function createMTLSAgent() {
+export function createMTLSAgent() {
   const { certPath, keyPath, cert, key } = config.mtls;
 
   let certData, keyData;
@@ -103,7 +103,7 @@ function makeRequest({ path, method = 'POST', body = null }) {
  * @param {string} [webhookData.secret] - Optional HMAC secret
  * @returns {Promise<Object>} Registration response with webhook_id
  */
-async function registerWebhook(webhookData) {
+export async function registerWebhook(webhookData) {
   const result = await makeRequest({
     path: '/register_webhook',
     body: webhookData,
@@ -122,7 +122,7 @@ async function registerWebhook(webhookData) {
  * @param {string} webhookData.webhook_id - ID of webhook to unregister
  * @returns {Promise<Object>} Unregistration response
  */
-async function unregisterWebhook(webhookData) {
+export async function unregisterWebhook(webhookData) {
   const result = await makeRequest({
     path: '/unregister_webhook',
     body: webhookData,
@@ -140,7 +140,7 @@ async function unregisterWebhook(webhookData) {
  * @param {string} transactionId - Transaction ID to fetch
  * @returns {Promise<Object>} Transaction data
  */
-async function getTransactionById(transactionId) {
+export async function getTransactionById(transactionId) {
   const result = await makeRequest({
     path: '/get_transaction_by_id',
     body: { transaction_id: transactionId },
@@ -148,10 +148,3 @@ async function getTransactionById(transactionId) {
 
   return result.data;
 }
-
-module.exports = {
-  createMTLSAgent,
-  registerWebhook,
-  unregisterWebhook,
-  getTransactionById,
-};

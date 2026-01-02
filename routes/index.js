@@ -3,8 +3,9 @@
  * Renders HTML pages using Pug templates
  */
 
-const express = require('express');
-const router = express.Router();
+import { Router } from 'express';
+
+const router = Router();
 
 /**
  * GET /
@@ -25,4 +26,4 @@ router.get('/transaction', (req, res) => {
   });
 });
 
-module.exports = router;
+export default router;

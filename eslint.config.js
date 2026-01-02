@@ -1,21 +1,21 @@
 /**
- * ESLint flat config for Node.js + Browser project
+ * ESLint flat config for Node.js ES Modules + Browser project
  * @see https://eslint.org/docs/latest/use/configure/configuration-files
  */
 
-const js = require('@eslint/js');
-const globals = require('globals');
+import js from '@eslint/js';
+import globals from 'globals';
 
-module.exports = [
+export default [
   js.configs.recommended,
   {
     files: ['**/*.js'],
     languageOptions: {
       ecmaVersion: 'latest',
-      sourceType: 'commonjs',
+      sourceType: 'module',
       globals: {
         ...globals.node,
-        ...globals.commonjs,
+        ...globals.es2021,
       },
     },
     rules: {
@@ -23,14 +23,15 @@ module.exports = [
       'linebreak-style': ['error', 'unix'],
       'quotes': ['error', 'single', { avoidEscape: true }],
       'semi': ['error', 'always'],
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_|next', varsIgnorePattern: '^_' }],
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       'no-console': 'off',
     },
   },
   {
-    // Browser-specific config for client-side JS
+    // Browser-specific config for client-side JS (remains CommonJS/script)
     files: ['public/javascripts/**/*.js'],
     languageOptions: {
+      sourceType: 'script',
       globals: {
         ...globals.browser,
         ...globals.jquery,
@@ -42,6 +43,7 @@ module.exports = [
         argsIgnorePattern: '^_',
         varsIgnorePattern: '^(_|WebhookApp$)',
       }],
+      'no-redeclare': ['error', { builtinGlobals: false }],
     },
   },
   {

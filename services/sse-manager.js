@@ -54,4 +54,4 @@ class SSEManager {
 }
 
 // Export singleton instance
-module.exports = new SSEManager();
+export default new SSEManager();

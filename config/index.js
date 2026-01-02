@@ -3,7 +3,7 @@
  * Loads environment variables and provides typed config object
  */
 
-require('dotenv').config();
+import 'dotenv/config';
 
 const config = {
   env: process.env.NODE_ENV || 'development',
@@ -40,4 +40,4 @@ config.hasMTLSConfig = function () {
   );
 };
 
-module.exports = config;
+export default config;

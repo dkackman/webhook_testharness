@@ -3,11 +3,12 @@
  * Handles mTLS-authenticated requests to the Sage wallet backend
  */
 
-const express = require('express');
-const router = express.Router();
-const asyncHandler = require('../middleware/async-handler');
-const sageApi = require('../services/sage-api');
-const webhookState = require('../services/webhook-state');
+import { Router } from 'express';
+import asyncHandler from '../middleware/async-handler.js';
+import * as sageApi from '../services/sage-api.js';
+import * as webhookState from '../services/webhook-state.js';
+
+const router = Router();
 
 /**
  * POST /proxy/register_webhook
@@ -87,4 +88,4 @@ router.get(
   })
 );
 
-module.exports = router;
+export default router;
