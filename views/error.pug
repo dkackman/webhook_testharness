@@ -1,6 +1,18 @@
 extends layout
 
 block content
-  h1= message
-  h2= error.status
-  pre #{error.stack}
+  .container-fluid
+    .alert.alert-danger
+      h4.alert-heading Error
+      p= message
+      if error.status
+        hr
+        p.mb-0
+          strong Status:
+          = ' ' + error.status
+
+    if error.stack
+      .card.mt-3
+        .card-header.fw-semibold Stack Trace
+        .card-body.p-0
+          pre.m-0.p-3.font-monospace.small(style="overflow-x: auto;")= error.stack

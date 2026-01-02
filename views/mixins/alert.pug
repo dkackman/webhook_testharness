@@ -1,0 +1,9 @@
+//- Alert component mixins
+
+//- Status alert with badge
+//- Usage: +statusAlert('id', 'title', 'badge-id', 'badge-text', 'variant')
+mixin statusAlert(id, title, badgeId, badgeText, variant)
+  .alert.mb-0.p-2&attributes(attributes)(id=id class=`alert-${variant}`)
+    .d-flex.align-items-center.justify-content-between
+      span.fw-semibold= title
+      span.badge(id=badgeId class=`text-bg-${variant}`)= badgeText

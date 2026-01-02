@@ -1,0 +1,31 @@
+//- Card component mixin
+//- Usage: +card('Title')(class='additional-classes')
+//-          +header (optional)
+//-            // header content
+//-          +body
+//-            // body content
+
+mixin card(title)
+  .card&attributes(attributes)
+    if block
+      block
+    else
+      .card-header.fw-semibold= title
+      .card-body
+        | No content
+
+//- Card header mixin for use within card
+mixin cardHeader(title)
+  .card-header.d-flex.align-items-center.justify-content-between
+    .fw-semibold= title
+    if block
+      block
+
+//- Card body mixin for use within card
+mixin cardBody
+  .card-body&attributes(attributes)
+    block
+
+//- Simple card header (no flex)
+mixin cardHeaderSimple(title)
+  .card-header.fw-semibold= title

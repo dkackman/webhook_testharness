@@ -1,0 +1,14 @@
+//- Form component mixins
+
+//- Text input with label and optional help text
+//- Usage: +formInput('label', 'id', 'placeholder', 'help text')
+mixin formInput(label, id, placeholder, helpText)
+  label.form-label(for=id)= label
+  input.form-control(type='text' id=id placeholder=placeholder)&attributes(attributes)
+  if helpText
+    .form-text= helpText
+
+//- Button group
+mixin buttonGroup
+  .d-flex.gap-2&attributes(attributes)
+    block

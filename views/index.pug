@@ -1,5 +1,9 @@
 extends layout
 
+include mixins/card
+include mixins/form
+include mixins/alert
+
 block content
   .container-fluid
     .d-flex.align-items-center.justify-content-between.mb-3
@@ -8,38 +12,32 @@ block content
         span.badge.text-bg-secondary#webhook-status Not registered
 
     .row.g-3
+      //- Live Events Panel
       .col-lg-8
         .card
-          .card-header.d-flex.align-items-center.justify-content-between
-            .fw-semibold Live Webhook Events
-            button.btn.btn-sm.btn-outline-secondary(type="button" onclick="clearWebhookEvents()") Clear
-          .card-body.p-0
+          +cardHeader('Live Webhook Events')
+            button.btn.btn-sm.btn-outline-secondary(type="button" onclick="WebhookApp.clearEvents()") Clear
+          +cardBody.p-0
             #webhook-events.log-panel.font-monospace.small No webhook events yet
 
+      //- Setup Panel
       .col-lg-4
+        //- Webhook Setup Card
         .card.mb-3
-          .card-header.fw-semibold Webhook Setup
-          .card-body
-            label.form-label(for="secret-input") Webhook Secret (optional)
-            input#secret-input.form-control(type="text" placeholder="Enter secret for HMAC verification")
-            .form-text If provided, webhooks will be signed with HMAC-SHA256.
+          +cardHeaderSimple('Webhook Setup')
+          +cardBody
+            +formInput('Webhook Secret (optional)', 'secret-input', 'Enter secret for HMAC verification', 'If provided, webhooks will be signed with HMAC-SHA256.')
 
-            .d-flex.gap-2.mt-3
-              button#register-btn.btn.btn-primary(type="button" onclick="registerWebhook()") Register
-              button#unregister-btn.btn.btn-outline-danger(type="button" onclick="unregisterWebhook()" style="display: none;") Unregister
+            +buttonGroup.mt-3
+              button#register-btn.btn.btn-primary(type="button" onclick="WebhookApp.register()") Register
+              button#unregister-btn.btn.btn-outline-danger(type="button" onclick="WebhookApp.unregister()" style="display: none;") Unregister
 
-            #verification-status.alert.alert-secondary.mt-3.mb-0.p-2
-              .d-flex.align-items-center.justify-content-between
-                span.fw-semibold HMAC Verification
-                span#verification-enabled.badge.text-bg-secondary Disabled
+            +statusAlert('verification-status', 'HMAC Verification', 'verification-enabled', 'Disabled', 'secondary').mt-3
 
+        //- Registration Response Card
         .card
-          .card-header.fw-semibold Registration Response
-          .card-body.p-0
+          +cardHeaderSimple('Registration Response')
+          +cardBody.p-0
             pre#response-display.log-panel-sm.font-monospace.small.m-0.p-3 Hook not registered
 
-  script(src='/javascripts/cookies.js')
-  script(src='/javascripts/ui-helpers.js')
-  script(src='/javascripts/event-stream.js')
-  script(src='/javascripts/webhook-api.js')
-  script(src='/javascripts/main.js')
+  script(src='/javascripts/app.js')
