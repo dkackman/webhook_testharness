@@ -23,4 +23,6 @@ a {
   min-height: 160px;
   max-height: 35vh;
   overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
