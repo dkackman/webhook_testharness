@@ -7,57 +7,12 @@ var WebhookApp = (function ($) {
   'use strict';
 
   // ============================================================
-  // Cookie Utilities
-  // ============================================================
-
-  var Cookies = {
-    set: function (name, value, days) {
-      days = days || 365;
-      var expires = new Date(Date.now() + days * 864e5).toUTCString();
-      var cookieStr =
-        name +
-        '=' +
-        encodeURIComponent(value) +
-        '; expires=' +
-        expires +
-        '; path=/; SameSite=Strict';
-
-      // Add Secure flag if served over HTTPS
-      if (window.location.protocol === 'https:') {
-        cookieStr += '; Secure';
-      }
-
-      document.cookie = cookieStr;
-    },
-
-    get: function (name) {
-      var value = '; ' + document.cookie;
-      var parts = value.split('; ' + name + '=');
-      if (parts.length === 2) {
-        return decodeURIComponent(parts.pop().split(';').shift());
-      }
-      return null;
-    },
-
-    delete: function (name) {
-      var cookieStr = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Strict';
-
-      // Add Secure flag if served over HTTPS
-      if (window.location.protocol === 'https:') {
-        cookieStr += '; Secure';
-      }
-
-      document.cookie = cookieStr;
-    },
-  };
-
-  // ============================================================
   // State Management
   // ============================================================
 
   var State = {
-    webhookId: Cookies.get('webhookId'),
-    webhookSecret: Cookies.get('webhookSecret'),
+    webhookId: window.Cookies.get('webhookId'),
+    webhookSecret: window.Cookies.get('webhookSecret'),
     eventCount: 0,
     isPaused: false,
     currentFilter: 'all',
@@ -704,9 +659,13 @@ var WebhookApp = (function ($) {
       State.webhookSecret = secret || null;
 
       if (State.webhookSecret) {
-        Cookies.set('webhookSecret', State.webhookSecret);
+        window.Cookies.set('webhookSecret', State.webhookSecret, {
+          expires: 365,
+          sameSite: 'strict',
+          secure: window.location.protocol === 'https:',
+        });
       } else {
-        Cookies.delete('webhookSecret');
+        window.Cookies.remove('webhookSecret');
       }
 
       var requestBody = { url: AppConfig.WEBHOOK.URL };
@@ -725,7 +684,11 @@ var WebhookApp = (function ($) {
         .then(function (data) {
           if (data.proxy_status === 'success' && data.webhook_id) {
             State.webhookId = data.webhook_id;
-            Cookies.set('webhookId', State.webhookId);
+            window.Cookies.set('webhookId', State.webhookId, {
+              expires: 365,
+              sameSite: 'strict',
+              secure: window.location.protocol === 'https:',
+            });
             UI.updateButtonStates();
             Events.addSystemEvent('Webhook registered successfully', 'success');
           } else {
@@ -753,8 +716,8 @@ var WebhookApp = (function ($) {
         .then(function () {
           State.webhookId = null;
           State.webhookSecret = null;
-          Cookies.delete('webhookId');
-          Cookies.delete('webhookSecret');
+          window.Cookies.remove('webhookId');
+          window.Cookies.remove('webhookSecret');
           $('#secret-input').val('');
           UI.updateButtonStates();
           Events.clear();
