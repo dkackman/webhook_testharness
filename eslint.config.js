@@ -38,6 +38,7 @@ export default [
         AppConfig: 'readonly',
         logger: 'readonly',
         createStateManager: 'readonly',
+        createDefaultStateConfig: 'readonly',
         createPageModule: 'readonly',
         renderJsonWithSyntax: 'readonly',
         buildUrl: 'readonly',
@@ -49,6 +50,7 @@ export default [
         validateLauncherIds: 'readonly',
         EventStore: 'readonly',
         SSEManager: 'readonly',
+        initSseStatusBadge: 'readonly',
       },
     },
     rules: {

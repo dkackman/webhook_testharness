@@ -123,12 +123,16 @@ var WebhookApp = (function ($) {
         $btn
           .addClass('paused')
           .html('<i class="bi bi-play-fill"></i>')
-          .attr('title', 'Resume event capture');
+          .attr('title', 'Resume event capture')
+          .attr('aria-pressed', 'true')
+          .attr('aria-label', 'Resume event capture');
       } else {
         $btn
           .removeClass('paused')
           .html('<i class="bi bi-pause-fill"></i>')
-          .attr('title', 'Pause event capture');
+          .attr('title', 'Pause event capture')
+          .attr('aria-pressed', 'false')
+          .attr('aria-label', 'Pause event capture');
       }
     },
 
@@ -161,21 +165,17 @@ var WebhookApp = (function ($) {
 
     applyFilter: function (filter) {
       State.currentFilter = filter;
-      $('.filter-btn').removeClass('active');
-      $('.filter-btn[data-filter="' + filter + '"]').addClass('active');
 
-      $('.event-item').each(function () {
-        var $item = $(this);
-        var isSystem = $item.hasClass('system-event');
+      // Update active state and aria-selected for accessibility
+      $('.filter-btn').removeClass('active').attr('aria-selected', 'false');
+      $('.filter-btn[data-filter="' + filter + '"]')
+        .addClass('active')
+        .attr('aria-selected', 'true');
 
-        if (filter === 'all') {
-          $item.show();
-        } else if (filter === 'webhook') {
-          $item.toggle(!isSystem);
-        } else if (filter === 'system') {
-          $item.toggle(isSystem);
-        }
-      });
+      // Use CSS classes for filtering (much faster than iterating DOM)
+      var $eventStream = $('#webhook-events');
+      $eventStream.removeClass('filter-all filter-webhook filter-system');
+      $eventStream.addClass('filter-' + filter);
     },
   };
 
@@ -232,6 +232,21 @@ var WebhookApp = (function ($) {
      * @private
      */
     createEntityLink: function (href, icon, text) {
+      // Validate URL before creating link
+      try {
+        // This will throw if the URL is malformed
+        var validatedUrl = new URL(href, window.location.origin);
+
+        // Ensure the URL is from the same origin (security check)
+        if (validatedUrl.origin !== window.location.origin) {
+          logger.warn('Attempted to create link to different origin:', href);
+          return null;
+        }
+      } catch (e) {
+        logger.error('Invalid URL for entity link:', href, e);
+        return null;
+      }
+
       var link = document.createElement('a');
       link.href = href;
       link.className = 'transaction-link';
@@ -304,7 +319,12 @@ var WebhookApp = (function ($) {
 
       var typeBadge = this.getEventTypeBadge(eventType);
       var verifyBadge = this.getVerificationBadge(verification);
-      var timestamp = this.formatTime(new Date());
+
+      // Use stored timestamp if available (for restored events), otherwise generate new one
+      var timestamp = eventData.timestamp
+        ? this.formatTime(new Date(eventData.timestamp))
+        : this.formatTime(new Date());
+
       var eventId = 'event-' + Date.now();
 
       var displayData = parsedData || eventData.data;
@@ -357,7 +377,9 @@ var WebhookApp = (function ($) {
           'bi bi-box-arrow-up-right',
           transactionId.substring(0, 12) + '...'
         );
-        eventMeta.appendChild(txLink);
+        if (txLink) {
+          eventMeta.appendChild(txLink);
+        }
       }
 
       // Coins link
@@ -367,7 +389,9 @@ var WebhookApp = (function ($) {
           'bi bi-coin me-1',
           coinIds.length + ' coin' + (coinIds.length !== 1 ? 's' : '')
         );
-        eventMeta.appendChild(coinsLink);
+        if (coinsLink) {
+          eventMeta.appendChild(coinsLink);
+        }
       }
 
       // Assets link
@@ -377,7 +401,9 @@ var WebhookApp = (function ($) {
           'bi bi-gem me-1',
           assetIds.length + ' asset' + (assetIds.length !== 1 ? 's' : '')
         );
-        eventMeta.appendChild(assetsLink);
+        if (assetsLink) {
+          eventMeta.appendChild(assetsLink);
+        }
       }
 
       // NFTs link
@@ -387,7 +413,9 @@ var WebhookApp = (function ($) {
           'bi bi-image me-1',
           launcherIds.length + ' NFT' + (launcherIds.length !== 1 ? 's' : '')
         );
-        eventMeta.appendChild(nftsLink);
+        if (nftsLink) {
+          eventMeta.appendChild(nftsLink);
+        }
       }
 
       eventHeader.appendChild(eventMeta);
@@ -397,8 +425,8 @@ var WebhookApp = (function ($) {
       eventActions.className = 'event-actions';
 
       var copyBtn = document.createElement('button');
-      copyBtn.className = 'btn-action';
-      copyBtn.setAttribute('onclick', "WebhookApp.copyEvent('" + eventId + "')");
+      copyBtn.className = 'btn-action btn-copy';
+      copyBtn.setAttribute('data-event-id', eventId);
       copyBtn.setAttribute('title', 'Copy JSON');
       var copyIcon = document.createElement('i');
       copyIcon.className = 'bi bi-clipboard';
@@ -406,8 +434,8 @@ var WebhookApp = (function ($) {
       eventActions.appendChild(copyBtn);
 
       var toggleBtn = document.createElement('button');
-      toggleBtn.className = 'btn-action';
-      toggleBtn.setAttribute('onclick', "WebhookApp.toggleDetails('" + eventId + "')");
+      toggleBtn.className = 'btn-action btn-toggle';
+      toggleBtn.setAttribute('data-event-id', eventId);
       toggleBtn.setAttribute('title', 'Toggle details');
       var toggleIcon = document.createElement('i');
       toggleIcon.className = 'bi bi-code-slash';
@@ -699,6 +727,21 @@ var WebhookApp = (function ($) {
       } else {
         $input.attr('type', 'password');
         $icon.removeClass('bi-eye-slash').addClass('bi-eye');
+      }
+    });
+
+    // Event delegation for event item buttons (copy, toggle)
+    $('#webhook-events').on('click', '.btn-copy', function () {
+      var eventId = $(this).attr('data-event-id');
+      if (eventId) {
+        WebhookApp.copyEvent(eventId);
+      }
+    });
+
+    $('#webhook-events').on('click', '.btn-toggle', function () {
+      var eventId = $(this).attr('data-event-id');
+      if (eventId) {
+        WebhookApp.toggleDetails(eventId);
       }
     });
   }

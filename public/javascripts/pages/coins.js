@@ -12,13 +12,7 @@
     apiEndpoint: AppConfig.API.GET_COINS,
     validateFunction: validateCoinIds,
     urlParamName: 'coin_ids',
-    stateConfig: {
-      loading: 'loading',
-      error: 'error',
-      errorMessage: 'error-message',
-      container: 'coins-container',
-      data: 'coins-data',
-    },
+    stateConfig: createDefaultStateConfig('coins'),
   });
 
   coinsModule.init();

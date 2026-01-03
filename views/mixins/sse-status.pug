@@ -1,46 +1,7 @@
 //- SSE Connection Status Badge
 //- Displays a badge showing the current SSE connection status
-//- Updates automatically when SSE connection state changes
+//- Updates automatically when SSE connection state changes via sseStatusBadge.js
 
 mixin sseStatusBadge()
   span.badge.text-bg-secondary.small#sse-status(title="Event stream status")
     i.bi.bi-wifi-off
-
-  script.
-    // Update SSE connection indicator
-    if (window.SSEManager) {
-      SSEManager.onStatusChange(function(status) {
-        var badge = document.getElementById('sse-status');
-        if (!badge) return;
-
-        badge.classList.remove('text-bg-secondary', 'text-bg-success', 'text-bg-warning');
-
-        // Clear and rebuild badge content safely
-        while (badge.firstChild) {
-          badge.removeChild(badge.firstChild);
-        }
-
-        var icon = document.createElement('i');
-        var text = document.createTextNode(' ');
-
-        if (status === 'connected') {
-          badge.classList.add('text-bg-success');
-          icon.className = 'bi bi-wifi';
-          badge.appendChild(icon);
-          badge.appendChild(text);
-          badge.appendChild(document.createTextNode('Events active'));
-        } else if (status === 'connecting') {
-          badge.classList.add('text-bg-warning');
-          icon.className = 'bi bi-wifi';
-          badge.appendChild(icon);
-          badge.appendChild(text);
-          badge.appendChild(document.createTextNode('Connecting...'));
-        } else {
-          badge.classList.add('text-bg-secondary');
-          icon.className = 'bi bi-wifi-off';
-          badge.appendChild(icon);
-          badge.appendChild(text);
-          badge.appendChild(document.createTextNode('Disconnected'));
-        }
-      });
-    }

@@ -12,13 +12,7 @@
     apiEndpoint: AppConfig.API.GET_NFTS,
     validateFunction: validateLauncherIds,
     urlParamName: 'launcher_ids',
-    stateConfig: {
-      loading: 'loading',
-      error: 'error',
-      errorMessage: 'error-message',
-      container: 'nfts-container',
-      data: 'nfts-data',
-    },
+    stateConfig: createDefaultStateConfig('nfts'),
   });
 
   nftsModule.init();

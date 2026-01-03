@@ -253,6 +253,17 @@ body {
   background: var(--bs-secondary-color);
 }
 
+/* Event filtering via CSS classes */
+.event-stream.filter-webhook .event-item.system-event {
+  display: none;
+}
+
+.event-stream.filter-system .event-item:not(.system-event) {
+  display: none;
+}
+
+/* filter-all shows everything (no rules needed) */
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .event-actions {

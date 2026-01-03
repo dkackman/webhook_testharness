@@ -12,13 +12,7 @@
     apiEndpoint: AppConfig.API.GET_ASSETS,
     validateFunction: validateAssetIds,
     urlParamName: 'asset_ids',
-    stateConfig: {
-      loading: 'loading',
-      error: 'error',
-      errorMessage: 'error-message',
-      container: 'assets-container',
-      data: 'assets-data',
-    },
+    stateConfig: createDefaultStateConfig('assets'),
   });
 
   assetsModule.init();

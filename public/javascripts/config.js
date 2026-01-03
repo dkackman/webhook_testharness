@@ -25,6 +25,7 @@ var AppConfig = {
   SSE: {
     EVENTS_URL: '/events',
     RECONNECT_DELAY: 3000, // ms
+    HEARTBEAT_TIMEOUT: 60000, // 60 seconds - timeout if no messages received
     SESSION_KEY: 'sse_session_active',
   },
 

@@ -5,6 +5,23 @@
  */
 
 /**
+ * Creates a default state configuration object
+ * @param {string} prefix - Element ID prefix (e.g., 'coins', 'assets', 'nfts')
+ * @returns {Object} State configuration object with standard element IDs
+ */
+function createDefaultStateConfig(prefix) {
+  'use strict';
+
+  return {
+    loading: 'loading',
+    error: 'error',
+    errorMessage: 'error-message',
+    container: prefix + '-container',
+    data: prefix + '-data',
+  };
+}
+
+/**
  * Creates a page module with standard functionality
  * @param {Object} config - Page configuration
  * @param {string} config.formId - Form element ID
@@ -132,6 +149,7 @@ function createPageModule(config) {
 
 // Make available globally
 if (typeof window !== 'undefined') {
+  window.createDefaultStateConfig = createDefaultStateConfig;
   window.createPageModule = createPageModule;
 }
 

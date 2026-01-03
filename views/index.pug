@@ -12,10 +12,10 @@ block content
           | Connecting...
 
       .d-flex.gap-2.align-items-center
-        span#event-counter.text-muted.small 0 events
-        button.btn.btn-sm.btn-outline-secondary#pause-btn(type="button" title="Pause event capture")
+        span#event-counter.text-muted.small(aria-live="polite") 0 events
+        button.btn.btn-sm.btn-outline-secondary#pause-btn(type="button" aria-pressed="false" aria-label="Pause event capture" title="Pause event capture")
           i.bi.bi-pause-fill
-        button.btn.btn-sm.btn-outline-secondary(type="button" onclick="WebhookApp.clearEvents()" title="Clear events") Clear
+        button.btn.btn-sm.btn-outline-secondary(type="button" onclick="WebhookApp.clearEvents()" aria-label="Clear all events" title="Clear events") Clear
         //- Event storage dropdown
         .dropdown
           button.btn.btn-sm.btn-outline-secondary.dropdown-toggle(type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Event storage options")
@@ -93,12 +93,12 @@ block content
       .card-header.d-flex.align-items-center.justify-content-between.py-2
         .d-flex.align-items-center.gap-2
           span.fw-semibold Live Events
-        .d-flex.gap-1
-          button.btn.btn-sm.px-2.py-0.filter-btn.active(data-filter="all" title="All events") All
-          button.btn.btn-sm.px-2.py-0.filter-btn(data-filter="webhook" title="Webhook events only") Webhooks
-          button.btn.btn-sm.px-2.py-0.filter-btn(data-filter="system" title="System messages only") System
+        .d-flex.gap-1(role="tablist" aria-label="Event filter")
+          button.btn.btn-sm.px-2.py-0.filter-btn.active(role="tab" aria-selected="true" data-filter="all" title="All events") All
+          button.btn.btn-sm.px-2.py-0.filter-btn(role="tab" aria-selected="false" data-filter="webhook" title="Webhook events only") Webhooks
+          button.btn.btn-sm.px-2.py-0.filter-btn(role="tab" aria-selected="false" data-filter="system" title="System messages only") System
 
-      #webhook-events.event-stream
+      #webhook-events.event-stream.filter-all(role="log" aria-live="polite" aria-label="Webhook events")
         .event-placeholder.text-center.text-muted.py-5
           i.bi.bi-inbox.d-block.fs-1.mb-2
           | Waiting for webhook events...

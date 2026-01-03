@@ -39,6 +39,30 @@ function isRetryableError(error, statusCode) {
 }
 
 /**
+ * Fetches data with timeout support (fallback for browsers without AbortController)
+ * @param {string} url - The URL to fetch
+ * @param {number} timeout - Timeout in milliseconds
+ * @returns {Promise<any>} The JSON response
+ */
+function fetchWithTimeoutFallback(url, timeout) {
+  return new Promise(function (resolve, reject) {
+    var timeoutId = setTimeout(function () {
+      reject(new Error('Request timed out'));
+    }, timeout);
+
+    fetch(url)
+      .then(function (response) {
+        clearTimeout(timeoutId);
+        resolve(response);
+      })
+      .catch(function (error) {
+        clearTimeout(timeoutId);
+        reject(error);
+      });
+  });
+}
+
+/**
  * Fetches data with timeout support
  * @param {string} url - The URL to fetch
  * @param {number} timeout - Timeout in milliseconds (default: 10000)
@@ -47,6 +71,45 @@ function isRetryableError(error, statusCode) {
 function fetchWithTimeout(url, timeout) {
   timeout = timeout || (window.AppConfig && window.AppConfig.TIMEOUTS.FETCH) || 10000;
 
+  // Check for AbortController support
+  if (typeof AbortController === 'undefined') {
+    if (window.logger) {
+      window.logger.warn('AbortController not supported, using timeout fallback');
+    }
+
+    return fetchWithTimeoutFallback(url, timeout).then(function (response) {
+      if (!response.ok) {
+        var statusCode = response.status;
+        var statusText = response.statusText;
+        return response
+          .json()
+          .then(function (err) {
+            var error = new Error(
+              err.message || err.error || 'Request failed with status ' + statusCode
+            );
+            error.statusCode = statusCode;
+            error.statusText = statusText;
+            error.responseBody = err;
+            throw error;
+          })
+          .catch(function (parseError) {
+            if (parseError.statusCode) {
+              throw parseError;
+            }
+            var error = new Error(
+              'Request failed with status ' + statusCode + ' (' + statusText + ')'
+            );
+            error.statusCode = statusCode;
+            error.statusText = statusText;
+            error.parseError = parseError.message;
+            throw error;
+          });
+      }
+      return response.json();
+    });
+  }
+
+  // Use AbortController for modern browsers
   var controller = new AbortController();
   var timeoutId = setTimeout(function () {
     controller.abort();
@@ -57,6 +120,7 @@ function fetchWithTimeout(url, timeout) {
       clearTimeout(timeoutId);
       if (!response.ok) {
         var statusCode = response.status;
+        var statusText = response.statusText;
         return response
           .json()
           .then(function (err) {
@@ -64,13 +128,23 @@ function fetchWithTimeout(url, timeout) {
               err.message || err.error || 'Request failed with status ' + statusCode
             );
             error.statusCode = statusCode;
+            error.statusText = statusText;
+            error.responseBody = err;
             throw error;
           })
           .catch(function (parseError) {
-            // If JSON parsing fails, throw original error with status
-            if (parseError.statusCode) throw parseError;
-            var error = new Error('Request failed with status ' + statusCode);
+            // If this is already our formatted error, re-throw it
+            if (parseError.statusCode) {
+              throw parseError;
+            }
+
+            // JSON parsing failed - create error with all available context
+            var error = new Error(
+              'Request failed with status ' + statusCode + ' (' + statusText + ')'
+            );
             error.statusCode = statusCode;
+            error.statusText = statusText;
+            error.parseError = parseError.message; // Preserve parse error for debugging
             throw error;
           });
       }

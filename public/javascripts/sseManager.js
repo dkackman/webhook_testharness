@@ -9,6 +9,7 @@ var SSEManager = (function () {
 
   var eventSource = null;
   var reconnectTimer = null;
+  var heartbeatTimeout = null;
   var listeners = [];
   var isConnected = false;
 
@@ -28,10 +29,58 @@ var SSEManager = (function () {
   }
 
   /**
+   * Resets the heartbeat timeout timer
+   * Called whenever any message is received from the server
+   */
+  function resetHeartbeatTimer() {
+    // Clear existing timer
+    if (heartbeatTimeout) {
+      clearTimeout(heartbeatTimeout);
+      heartbeatTimeout = null;
+    }
+
+    // Set new timer
+    heartbeatTimeout = setTimeout(function () {
+      logger.warn(
+        'SSE heartbeat timeout - no messages received for ' + AppConfig.SSE.HEARTBEAT_TIMEOUT + 'ms'
+      );
+
+      // Close connection and trigger reconnect
+      if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+      }
+
+      notifyListeners('disconnected');
+
+      // Attempt reconnection
+      if (!reconnectTimer) {
+        logger.log('Reconnecting after heartbeat timeout...');
+        reconnectTimer = setTimeout(function () {
+          reconnectTimer = null;
+          connect();
+        }, AppConfig.SSE.RECONNECT_DELAY);
+      }
+    }, AppConfig.SSE.HEARTBEAT_TIMEOUT);
+  }
+
+  /**
+   * Clears the heartbeat timeout timer
+   */
+  function clearHeartbeatTimer() {
+    if (heartbeatTimeout) {
+      clearTimeout(heartbeatTimeout);
+      heartbeatTimeout = null;
+    }
+  }
+
+  /**
    * Handles incoming webhook events
    * @param {Object} event - SSE event object
    */
   function handleWebhookEvent(event) {
+    // Reset heartbeat timer on any message
+    resetHeartbeatTimer();
     try {
       var eventData = {
         id: Date.now(),
@@ -93,11 +142,21 @@ var SSEManager = (function () {
         clearTimeout(reconnectTimer);
         reconnectTimer = null;
       }
+
+      // Start heartbeat monitoring
+      resetHeartbeatTimer();
+    };
+
+    // Reset heartbeat on any message (including keepalives)
+    eventSource.onmessage = function () {
+      resetHeartbeatTimer();
     };
 
     eventSource.addEventListener('webhook', handleWebhookEvent);
 
     eventSource.onerror = function (error) {
+      // Clear heartbeat timer on error
+      clearHeartbeatTimer();
       logger.error('SSE connection error:', error);
       notifyListeners('disconnected');
 
@@ -124,10 +183,13 @@ var SSEManager = (function () {
   function disconnect() {
     logger.log('Closing SSE connection');
 
+    // Clear all timers
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
     }
+
+    clearHeartbeatTimer();
 
     if (eventSource) {
       eventSource.close();
