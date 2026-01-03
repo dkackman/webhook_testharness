@@ -5,10 +5,35 @@
 
 import { Router } from 'express';
 import asyncHandler from '../middleware/async-handler.js';
+import { ApiError } from '../middleware/error-handler.js';
 import * as sageApi from '../services/sage-api.js';
 import * as webhookState from '../services/webhook-state.js';
 
 const router = Router();
+
+/**
+ * Parses comma-separated IDs from query parameter
+ * @param {string} param - Query parameter value
+ * @param {string} paramName - Parameter name for error messages
+ * @returns {string[]} Array of trimmed, non-empty IDs
+ * @throws {ApiError} If parameter is missing or empty
+ */
+function parseIdList(param, paramName) {
+  if (!param) {
+    throw new ApiError(400, `Missing ${paramName} query parameter`);
+  }
+
+  const ids = param
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean);
+
+  if (ids.length === 0) {
+    throw new ApiError(400, `No valid ${paramName} provided`);
+  }
+
+  return ids;
+}
 
 /**
  * POST /proxy/register_webhook
@@ -17,21 +42,9 @@ const router = Router();
 router.post(
   '/register_webhook',
   asyncHandler(async (req, res) => {
-    // Store the secret if provided
     webhookState.setSecret(req.body.secret || null);
-
-    try {
-      const result = await sageApi.registerWebhook(req.body);
-      res.json(result);
-    } catch (error) {
-      console.error('Error in register_webhook handler:', error);
-      res.status(500).json({
-        proxy_status: 'error',
-        proxy_message: 'Failed to register webhook',
-        error: error.message,
-        details: error.code || 'Configuration or certificate error - check server logs',
-      });
-    }
+    const result = await sageApi.registerWebhook(req.body);
+    res.json(result);
   })
 );
 
@@ -42,21 +55,9 @@ router.post(
 router.post(
   '/unregister_webhook',
   asyncHandler(async (req, res) => {
-    // Clear the secret
     webhookState.clearSecret();
-
-    try {
-      const result = await sageApi.unregisterWebhook(req.body);
-      res.json(result);
-    } catch (error) {
-      console.error('Error in unregister_webhook handler:', error);
-      res.status(500).json({
-        proxy_status: 'error',
-        proxy_message: 'Failed to unregister webhook',
-        error: error.message,
-        details: error.code || 'Configuration or certificate error - check server logs',
-      });
-    }
+    const result = await sageApi.unregisterWebhook(req.body);
+    res.json(result);
   })
 );
 
@@ -70,21 +71,11 @@ router.get(
     const transactionId = req.query.transaction_id;
 
     if (!transactionId) {
-      return res.status(400).json({
-        error: 'Missing transaction_id query parameter',
-      });
+      throw new ApiError(400, 'Missing transaction_id query parameter');
     }
 
-    try {
-      const transactionData = await sageApi.getTransactionById(transactionId);
-      res.json(transactionData);
-    } catch (error) {
-      console.error('Error getting transaction:', error);
-      res.status(500).json({
-        error: 'Failed to get transaction',
-        message: error.message,
-      });
-    }
+    const transactionData = await sageApi.getTransactionById(transactionId);
+    res.json(transactionData);
   })
 );
 
@@ -95,36 +86,9 @@ router.get(
 router.get(
   '/get_coins',
   asyncHandler(async (req, res) => {
-    const coinIdsParam = req.query.coin_ids;
-
-    if (!coinIdsParam) {
-      return res.status(400).json({
-        error: 'Missing coin_ids query parameter',
-      });
-    }
-
-    // Parse comma-separated coin IDs
-    const coinIds = coinIdsParam
-      .split(',')
-      .map((id) => id.trim())
-      .filter(Boolean);
-
-    if (coinIds.length === 0) {
-      return res.status(400).json({
-        error: 'No valid coin IDs provided',
-      });
-    }
-
-    try {
-      const coinData = await sageApi.getCoinsByIds(coinIds);
-      res.json(coinData);
-    } catch (error) {
-      console.error('Error getting coins:', error);
-      res.status(500).json({
-        error: 'Failed to get coins',
-        message: error.message,
-      });
-    }
+    const coinIds = parseIdList(req.query.coin_ids, 'coin_ids');
+    const coinData = await sageApi.getCoinsByIds(coinIds);
+    res.json(coinData);
   })
 );
 
@@ -135,36 +99,9 @@ router.get(
 router.get(
   '/get_assets',
   asyncHandler(async (req, res) => {
-    const assetIdsParam = req.query.asset_ids;
-
-    if (!assetIdsParam) {
-      return res.status(400).json({
-        error: 'Missing asset_ids query parameter',
-      });
-    }
-
-    // Parse comma-separated asset IDs
-    const assetIds = assetIdsParam
-      .split(',')
-      .map((id) => id.trim())
-      .filter(Boolean);
-
-    if (assetIds.length === 0) {
-      return res.status(400).json({
-        error: 'No valid asset IDs provided',
-      });
-    }
-
-    try {
-      const assetData = await sageApi.getAssetsByIds(assetIds);
-      res.json(assetData);
-    } catch (error) {
-      console.error('Error getting assets:', error);
-      res.status(500).json({
-        error: 'Failed to get assets',
-        message: error.message,
-      });
-    }
+    const assetIds = parseIdList(req.query.asset_ids, 'asset_ids');
+    const assetData = await sageApi.getAssetsByIds(assetIds);
+    res.json(assetData);
   })
 );
 
@@ -175,36 +112,9 @@ router.get(
 router.get(
   '/get_nfts',
   asyncHandler(async (req, res) => {
-    const launcherIdsParam = req.query.launcher_ids;
-
-    if (!launcherIdsParam) {
-      return res.status(400).json({
-        error: 'Missing launcher_ids query parameter',
-      });
-    }
-
-    // Parse comma-separated launcher IDs
-    const launcherIds = launcherIdsParam
-      .split(',')
-      .map((id) => id.trim())
-      .filter(Boolean);
-
-    if (launcherIds.length === 0) {
-      return res.status(400).json({
-        error: 'No valid launcher IDs provided',
-      });
-    }
-
-    try {
-      const nftData = await sageApi.getNFTsByIds(launcherIds);
-      res.json(nftData);
-    } catch (error) {
-      console.error('Error getting NFTs:', error);
-      res.status(500).json({
-        error: 'Failed to get NFTs',
-        message: error.message,
-      });
-    }
+    const launcherIds = parseIdList(req.query.launcher_ids, 'launcher_ids');
+    const nftData = await sageApi.getNFTsByIds(launcherIds);
+    res.json(nftData);
   })
 );
 
