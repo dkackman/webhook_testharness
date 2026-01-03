@@ -6,16 +6,16 @@ block content
   .container-fluid
     h2.mb-3= title
 
-    //- Transaction ID Input Form
+    //- Coin IDs Input Form
     .card.mb-3
-      +cardHeaderSimple('Transaction ID')
+      +cardHeaderSimple('Coin IDs')
       .card-body
-        form#transaction-form
+        form#coin-form
           .input-group
-            input#transaction-id-input.form-control.font-monospace(
+            input#coin-ids-input.form-control.font-monospace(
               type="text"
-              placeholder="Enter transaction ID"
-              value=transaction_id
+              placeholder="Enter coin IDs (comma-separated)"
+              value=coin_ids
             )
             button.btn.btn-primary(type="submit") Lookup
 
@@ -23,28 +23,28 @@ block content
     #loading.text-center.p-4(style="display: none;")
       .spinner-border.text-primary.mb-2(role="status")
         span.visually-hidden Loading...
-      p.text-muted Loading transaction details...
+      p.text-muted Loading coin details...
 
     //- Error State
     #error.alert.alert-danger(style="display: none;")
       strong Error:
       span#error-message
 
-    //- Transaction Data
-    .card#transaction-container(style="display: none;")
-      +cardHeaderSimple('Transaction Details')
+    //- Coin Data
+    .card#coins-container(style="display: none;")
+      +cardHeaderSimple('Coin Details')
       .card-body.p-0
-        pre#transaction-data.m-0.p-3.font-monospace.small.event-details
+        pre#coins-data.m-0.p-3.font-monospace.small.event-details
 
   script.
     (function() {
-      var $form = document.getElementById('transaction-form');
-      var $input = document.getElementById('transaction-id-input');
+      var $form = document.getElementById('coin-form');
+      var $input = document.getElementById('coin-ids-input');
       var $loading = document.getElementById('loading');
       var $error = document.getElementById('error');
       var $errorMessage = document.getElementById('error-message');
-      var $container = document.getElementById('transaction-container');
-      var $data = document.getElementById('transaction-data');
+      var $container = document.getElementById('coins-container');
+      var $data = document.getElementById('coins-data');
 
       function showLoading() {
         $loading.style.display = 'block';
@@ -114,22 +114,22 @@ block content
         renderJsonWithSyntax($data, data);
       }
 
-      function fetchTransaction(transactionId) {
-        if (!transactionId) {
+      function fetchCoins(coinIds) {
+        if (!coinIds) {
           return;
         }
 
         showLoading();
 
         var url = new URL(window.location);
-        url.searchParams.set('transaction_id', transactionId);
+        url.searchParams.set('coin_ids', coinIds);
         window.history.pushState({}, '', url);
 
-        fetch('/proxy/get_transaction?transaction_id=' + encodeURIComponent(transactionId))
+        fetch('/proxy/get_coins?coin_ids=' + encodeURIComponent(coinIds))
           .then(function(response) {
             if (!response.ok) {
               return response.json().then(function(err) {
-                throw new Error(err.message || err.error || 'Failed to fetch transaction');
+                throw new Error(err.message || err.error || 'Failed to fetch coins');
               });
             }
             return response.json();
@@ -143,14 +143,14 @@ block content
 
       $form.addEventListener('submit', function(e) {
         e.preventDefault();
-        var transactionId = $input.value.trim();
-        if (transactionId) {
-          fetchTransaction(transactionId);
+        var coinIds = $input.value.trim();
+        if (coinIds) {
+          fetchCoins(coinIds);
         }
       });
 
-      var initialTransactionId = '#{transaction_id}';
-      if (initialTransactionId) {
-        fetchTransaction(initialTransactionId);
+      var initialCoinIds = '#{coin_ids}';
+      if (initialCoinIds) {
+        fetchCoins(initialCoinIds);
       }
     })();

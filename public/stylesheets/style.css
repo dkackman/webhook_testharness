@@ -75,6 +75,12 @@ body {
   font-size: 10px;
 }
 
+/* Custom purple badge for CAT events */
+.text-bg-purple {
+  background-color: #8b5cf6 !important;
+  color: white !important;
+}
+
 /* Event Summary (one-liner) */
 .event-summary {
   font-family: var(--bs-font-monospace);

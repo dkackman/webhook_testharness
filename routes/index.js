@@ -26,4 +26,26 @@ router.get('/transaction', (req, res) => {
   });
 });
 
+/**
+ * GET /coins
+ * Renders the coin details page
+ */
+router.get('/coins', (req, res) => {
+  res.render('coins', {
+    title: 'Coin Details',
+    coin_ids: req.query.coin_ids || '',
+  });
+});
+
+/**
+ * GET /assets
+ * Renders the asset details page
+ */
+router.get('/assets', (req, res) => {
+  res.render('assets', {
+    title: 'Asset Details',
+    asset_ids: req.query.asset_ids || '',
+  });
+});
+
 export default router;

@@ -88,4 +88,84 @@ router.get(
   })
 );
 
+/**
+ * GET /proxy/get_coins
+ * Fetches coin details by IDs (comma-separated)
+ */
+router.get(
+  '/get_coins',
+  asyncHandler(async (req, res) => {
+    const coinIdsParam = req.query.coin_ids;
+
+    if (!coinIdsParam) {
+      return res.status(400).json({
+        error: 'Missing coin_ids query parameter',
+      });
+    }
+
+    // Parse comma-separated coin IDs
+    const coinIds = coinIdsParam
+      .split(',')
+      .map((id) => id.trim())
+      .filter(Boolean);
+
+    if (coinIds.length === 0) {
+      return res.status(400).json({
+        error: 'No valid coin IDs provided',
+      });
+    }
+
+    try {
+      const coinData = await sageApi.getCoinsByIds(coinIds);
+      res.json(coinData);
+    } catch (error) {
+      console.error('Error getting coins:', error);
+      res.status(500).json({
+        error: 'Failed to get coins',
+        message: error.message,
+      });
+    }
+  })
+);
+
+/**
+ * GET /proxy/get_assets
+ * Fetches asset details by IDs (comma-separated)
+ */
+router.get(
+  '/get_assets',
+  asyncHandler(async (req, res) => {
+    const assetIdsParam = req.query.asset_ids;
+
+    if (!assetIdsParam) {
+      return res.status(400).json({
+        error: 'Missing asset_ids query parameter',
+      });
+    }
+
+    // Parse comma-separated asset IDs
+    const assetIds = assetIdsParam
+      .split(',')
+      .map((id) => id.trim())
+      .filter(Boolean);
+
+    if (assetIds.length === 0) {
+      return res.status(400).json({
+        error: 'No valid asset IDs provided',
+      });
+    }
+
+    try {
+      const assetData = await sageApi.getAssetsByIds(assetIds);
+      res.json(assetData);
+    } catch (error) {
+      console.error('Error getting assets:', error);
+      res.status(500).json({
+        error: 'Failed to get assets',
+        message: error.message,
+      });
+    }
+  })
+);
+
 export default router;

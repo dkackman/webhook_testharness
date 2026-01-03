@@ -198,6 +198,8 @@ var WebhookApp = (function ($) {
       var badges = {
         transaction_updated: { text: 'TX Updated', class: 'text-bg-info' },
         transaction_confirmed: { text: 'TX Confirmed', class: 'text-bg-success' },
+        coins_updated: { text: 'Coins Updated', class: 'text-bg-warning' },
+        cat_info: { text: 'CAT Info', class: 'text-bg-purple' },
         wallet_sync: { text: 'Wallet Sync', class: 'text-bg-primary' },
       };
       return badges[eventType] || { text: eventType || 'Event', class: 'text-bg-secondary' };
@@ -268,6 +270,8 @@ var WebhookApp = (function ($) {
       var eventType = parsedData && parsedData.body && parsedData.body.event_type;
       var verification = parsedData && parsedData.verification;
       var transactionId = null;
+      var coinIds = null;
+      var assetIds = null;
 
       if (
         (eventType === 'transaction_updated' || eventType === 'transaction_confirmed') &&
@@ -277,6 +281,24 @@ var WebhookApp = (function ($) {
         transactionId = parsedData.body.data.transaction_id;
       }
 
+      if (
+        eventType === 'coins_updated' &&
+        parsedData.body.data &&
+        parsedData.body.data.coin_ids &&
+        parsedData.body.data.coin_ids.length > 0
+      ) {
+        coinIds = parsedData.body.data.coin_ids;
+      }
+
+      if (
+        eventType === 'cat_info' &&
+        parsedData.body.data &&
+        parsedData.body.data.asset_ids &&
+        parsedData.body.data.asset_ids.length > 0
+      ) {
+        assetIds = parsedData.body.data.asset_ids;
+      }
+
       var typeBadge = this.getEventTypeBadge(eventType);
       var verifyBadge = this.getVerificationBadge(verification);
       var timestamp = this.formatTime(new Date());
@@ -284,9 +306,14 @@ var WebhookApp = (function ($) {
 
       var displayData = parsedData || eventData.data;
       var jsonString = JSON.stringify(displayData, null, 2);
-      var summary = eventType
-        ? eventType + (transactionId ? ': ' + transactionId.substring(0, 16) + '...' : '')
-        : 'Webhook received';
+      var summary = eventType ? eventType : 'Webhook received';
+      if (transactionId) {
+        summary += ': ' + transactionId.substring(0, 16) + '...';
+      } else if (coinIds) {
+        summary += ': ' + coinIds.length + ' coin' + (coinIds.length !== 1 ? 's' : '');
+      } else if (assetIds) {
+        summary += ': ' + assetIds.length + ' asset' + (assetIds.length !== 1 ? 's' : '');
+      }
 
       var html =
         '<div class="event-item" data-event-id="' +
@@ -313,6 +340,24 @@ var WebhookApp = (function ($) {
             '" target="_blank" class="transaction-link"><i class="bi bi-box-arrow-up-right"></i>' +
             transactionId.substring(0, 12) +
             '...</a>'
+          : '') +
+        (coinIds
+          ? '      <a href="/coins?coin_ids=' +
+            encodeURIComponent(coinIds.join(',')) +
+            '" target="_blank" class="transaction-link"><i class="bi bi-coin me-1"></i>' +
+            coinIds.length +
+            ' coin' +
+            (coinIds.length !== 1 ? 's' : '') +
+            '</a>'
+          : '') +
+        (assetIds
+          ? '      <a href="/assets?asset_ids=' +
+            encodeURIComponent(assetIds.join(',')) +
+            '" target="_blank" class="transaction-link"><i class="bi bi-gem me-1"></i>' +
+            assetIds.length +
+            ' asset' +
+            (assetIds.length !== 1 ? 's' : '') +
+            '</a>'
           : '') +
         '    </div>' +
         '    <div class="event-actions">' +

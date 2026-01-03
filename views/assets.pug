@@ -6,16 +6,16 @@ block content
   .container-fluid
     h2.mb-3= title
 
-    //- Transaction ID Input Form
+    //- Asset IDs Input Form
     .card.mb-3
-      +cardHeaderSimple('Transaction ID')
+      +cardHeaderSimple('Asset IDs')
       .card-body
-        form#transaction-form
+        form#asset-form
           .input-group
-            input#transaction-id-input.form-control.font-monospace(
+            input#asset-ids-input.form-control.font-monospace(
               type="text"
-              placeholder="Enter transaction ID"
-              value=transaction_id
+              placeholder="Enter asset IDs (comma-separated)"
+              value=asset_ids
             )
             button.btn.btn-primary(type="submit") Lookup
 
@@ -23,28 +23,28 @@ block content
     #loading.text-center.p-4(style="display: none;")
       .spinner-border.text-primary.mb-2(role="status")
         span.visually-hidden Loading...
-      p.text-muted Loading transaction details...
+      p.text-muted Loading asset details...
 
     //- Error State
     #error.alert.alert-danger(style="display: none;")
       strong Error:
       span#error-message
 
-    //- Transaction Data
-    .card#transaction-container(style="display: none;")
-      +cardHeaderSimple('Transaction Details')
+    //- Asset Data
+    .card#assets-container(style="display: none;")
+      +cardHeaderSimple('Asset Details')
       .card-body.p-0
-        pre#transaction-data.m-0.p-3.font-monospace.small.event-details
+        pre#assets-data.m-0.p-3.font-monospace.small.event-details
 
   script.
     (function() {
-      var $form = document.getElementById('transaction-form');
-      var $input = document.getElementById('transaction-id-input');
+      var $form = document.getElementById('asset-form');
+      var $input = document.getElementById('asset-ids-input');
       var $loading = document.getElementById('loading');
       var $error = document.getElementById('error');
       var $errorMessage = document.getElementById('error-message');
-      var $container = document.getElementById('transaction-container');
-      var $data = document.getElementById('transaction-data');
+      var $container = document.getElementById('assets-container');
+      var $data = document.getElementById('assets-data');
 
       function showLoading() {
         $loading.style.display = 'block';
@@ -114,22 +114,22 @@ block content
         renderJsonWithSyntax($data, data);
       }
 
-      function fetchTransaction(transactionId) {
-        if (!transactionId) {
+      function fetchAssets(assetIds) {
+        if (!assetIds) {
           return;
         }
 
         showLoading();
 
         var url = new URL(window.location);
-        url.searchParams.set('transaction_id', transactionId);
+        url.searchParams.set('asset_ids', assetIds);
         window.history.pushState({}, '', url);
 
-        fetch('/proxy/get_transaction?transaction_id=' + encodeURIComponent(transactionId))
+        fetch('/proxy/get_assets?asset_ids=' + encodeURIComponent(assetIds))
           .then(function(response) {
             if (!response.ok) {
               return response.json().then(function(err) {
-                throw new Error(err.message || err.error || 'Failed to fetch transaction');
+                throw new Error(err.message || err.error || 'Failed to fetch assets');
               });
             }
             return response.json();
@@ -143,14 +143,14 @@ block content
 
       $form.addEventListener('submit', function(e) {
         e.preventDefault();
-        var transactionId = $input.value.trim();
-        if (transactionId) {
-          fetchTransaction(transactionId);
+        var assetIds = $input.value.trim();
+        if (assetIds) {
+          fetchAssets(assetIds);
         }
       });
 
-      var initialTransactionId = '#{transaction_id}';
-      if (initialTransactionId) {
-        fetchTransaction(initialTransactionId);
+      var initialAssetIds = '#{asset_ids}';
+      if (initialAssetIds) {
+        fetchAssets(initialAssetIds);
       }
     })();

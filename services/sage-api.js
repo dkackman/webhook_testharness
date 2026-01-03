@@ -148,3 +148,31 @@ export async function getTransactionById(transactionId) {
 
   return result.data;
 }
+
+/**
+ * Get coin details by IDs
+ * @param {string[]} coinIds - Array of coin IDs to fetch
+ * @returns {Promise<Object>} Coin data
+ */
+export async function getCoinsByIds(coinIds) {
+  const result = await makeRequest({
+    path: '/get_coins_by_ids',
+    body: { coin_ids: coinIds },
+  });
+
+  return result.data;
+}
+
+/**
+ * Get asset details by IDs
+ * @param {string[]} assetIds - Array of asset IDs to fetch
+ * @returns {Promise<Object>} Asset data
+ */
+export async function getAssetsByIds(assetIds) {
+  const result = await makeRequest({
+    path: '/get_assets_by_ids',
+    body: { asset_ids: assetIds },
+  });
+
+  return result.data;
+}
