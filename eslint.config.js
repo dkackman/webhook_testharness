@@ -64,6 +64,17 @@ export default [
     },
   },
   {
+    // Test files (Mocha + Chai)
+    files: ['test/**/*.js'],
+    languageOptions: {
+      sourceType: 'module',
+      globals: {
+        ...globals.node,
+        ...globals.mocha,
+      },
+    },
+  },
+  {
     ignores: ['node_modules/**'],
   },
   // Prettier must be last to override other configs
