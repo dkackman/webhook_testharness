@@ -4,16 +4,10 @@
 
 var AppConfig = {
   // Debug mode - enables console logging
-  // Enabled when:
-  // - Running on localhost
-  // - URL contains ?debug=true
+  // Enabled when URL contains ?debug=true
   DEBUG: (function () {
     if (typeof window === 'undefined') return false;
-    return (
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1' ||
-      window.location.search.includes('debug=true')
-    );
+    return window.location.search.includes('debug=true');
   })(),
 
   // Webhook configuration

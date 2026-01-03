@@ -20,9 +20,7 @@
 
     var badge = document.getElementById('sse-status');
     if (!badge) {
-      if (window.logger) {
-        window.logger.warn('SSE status badge element not found');
-      }
+      // Badge not present on this page - this is expected on non-main pages
       return;
     }
 

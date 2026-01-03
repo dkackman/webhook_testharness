@@ -532,17 +532,22 @@ var WebhookApp = (function ($) {
       variant = variant || 'secondary';
       UI.clearPlaceholder();
 
-      var html =
-        '<div class="event-item system-event">' +
-        '  <div class="event-summary text-' +
-        variant +
-        '">' +
-        '    <i class="bi bi-info-circle me-1"></i>' +
-        message +
-        '  </div>' +
-        '</div>';
+      // Build DOM elements to prevent XSS
+      var eventItem = document.createElement('div');
+      eventItem.className = 'event-item system-event';
 
-      $('#webhook-events').prepend(html);
+      var summary = document.createElement('div');
+      summary.className = 'event-summary text-' + variant;
+
+      var icon = document.createElement('i');
+      icon.className = 'bi bi-info-circle me-1';
+      summary.appendChild(icon);
+
+      // Use textContent to safely insert the message
+      summary.appendChild(document.createTextNode(message));
+      eventItem.appendChild(summary);
+
+      $('#webhook-events').prepend(eventItem);
     },
 
     addWebhookEvent: function (eventData, skipPersist) {

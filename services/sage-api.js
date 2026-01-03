@@ -40,15 +40,19 @@ export function createMTLSAgent() {
   });
 }
 
+// Default request timeout in milliseconds
+const REQUEST_TIMEOUT_MS = 30000;
+
 /**
  * Makes an HTTPS request to the Sage API
  * @param {Object} options - Request options
  * @param {string} options.path - API endpoint path
  * @param {string} [options.method='POST'] - HTTP method
  * @param {Object} [options.body] - Request body (will be JSON stringified)
+ * @param {number} [options.timeout] - Request timeout in milliseconds
  * @returns {Promise<Object>} Parsed JSON response
  */
-function makeRequest({ path, method = 'POST', body = null }) {
+function makeRequest({ path, method = 'POST', body = null, timeout = REQUEST_TIMEOUT_MS }) {
   return new Promise((resolve, reject) => {
     const agent = createMTLSAgent();
     const postData = body ? JSON.stringify(body) : '';
@@ -83,6 +87,12 @@ function makeRequest({ path, method = 'POST', body = null }) {
           reject(new Error(`Failed to parse response: ${data}`));
         }
       });
+    });
+
+    // Add timeout handling
+    req.setTimeout(timeout, () => {
+      req.destroy();
+      reject(new Error(`Request to ${path} timed out after ${timeout}ms`));
     });
 
     req.on('error', (err) => {

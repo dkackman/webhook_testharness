@@ -41,15 +41,21 @@ class SSEManager {
    */
   broadcast(eventData) {
     const message = `id: ${eventData.id}\nevent: ${eventData.event}\ndata: ${eventData.data}\n\n`;
+    const failedConnections = [];
 
     this.connections.forEach((res) => {
       try {
         res.write(message);
       } catch (error) {
         console.error('Error sending SSE message:', error);
-        this.removeConnection(res);
+        failedConnections.push(res);
       }
     });
+
+    // Remove failed connections after iteration to avoid modifying Set during loop
+    for (const res of failedConnections) {
+      this.removeConnection(res);
+    }
   }
 }
 
