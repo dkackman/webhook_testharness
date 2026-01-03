@@ -12,12 +12,6 @@ var SSEManager = (function () {
   var listeners = [];
   var isConnected = false;
 
-  var CONFIG = {
-    EVENTS_URL: '/events',
-    RECONNECT_DELAY: 3000,
-    SESSION_KEY: 'sse_session_active',
-  };
-
   /**
    * Notifies all registered listeners of a status change
    * @param {string} status - Connection status: 'connected', 'connecting', 'disconnected'
@@ -83,12 +77,12 @@ var SSEManager = (function () {
 
     // Mark session as active
     try {
-      sessionStorage.setItem(CONFIG.SESSION_KEY, 'true');
+      sessionStorage.setItem(AppConfig.SSE.SESSION_KEY, 'true');
     } catch (e) {
       logger.warn('sessionStorage not available:', e);
     }
 
-    eventSource = new EventSource(CONFIG.EVENTS_URL);
+    eventSource = new EventSource(AppConfig.SSE.EVENTS_URL);
 
     eventSource.onopen = function () {
       logger.log('SSE connection established');
@@ -115,11 +109,11 @@ var SSEManager = (function () {
 
       // Attempt reconnection
       if (!reconnectTimer) {
-        logger.log('Reconnecting in ' + CONFIG.RECONNECT_DELAY + 'ms...');
+        logger.log('Reconnecting in ' + AppConfig.SSE.RECONNECT_DELAY + 'ms...');
         reconnectTimer = setTimeout(function () {
           reconnectTimer = null;
           connect();
-        }, CONFIG.RECONNECT_DELAY);
+        }, AppConfig.SSE.RECONNECT_DELAY);
       }
     };
   }
@@ -144,7 +138,7 @@ var SSEManager = (function () {
 
     // Mark session as inactive
     try {
-      sessionStorage.removeItem(CONFIG.SESSION_KEY);
+      sessionStorage.removeItem(AppConfig.SSE.SESSION_KEY);
     } catch (_e) {
       // Ignore
     }
@@ -207,7 +201,7 @@ var SSEManager = (function () {
       var wasActive = false;
 
       try {
-        wasActive = sessionStorage.getItem(CONFIG.SESSION_KEY) === 'true';
+        wasActive = sessionStorage.getItem(AppConfig.SSE.SESSION_KEY) === 'true';
       } catch (_e) {
         // Ignore
       }

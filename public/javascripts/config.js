@@ -16,6 +16,24 @@ var AppConfig = {
     );
   })(),
 
+  // Webhook configuration
+  WEBHOOK: {
+    URL: 'http://localhost:3000/sage_hook',
+  },
+
+  // Server-Sent Events (SSE) configuration
+  SSE: {
+    EVENTS_URL: '/events',
+    RECONNECT_DELAY: 3000, // ms
+    SESSION_KEY: 'sse_session_active',
+  },
+
+  // Cache configuration
+  CACHE: {
+    TTL: 5 * 60 * 1000, // 5 minutes
+    MAX_SIZE: 50, // Maximum number of cached entries
+  },
+
   // API endpoints
   API: {
     GET_COINS: '/proxy/get_coins',

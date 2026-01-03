@@ -7,15 +7,6 @@ var WebhookApp = (function ($) {
   'use strict';
 
   // ============================================================
-  // Configuration
-  // ============================================================
-
-  var CONFIG = {
-    WEBHOOK_URL: 'http://localhost:3000/sage_hook',
-    RECONNECT_DELAY: 3000,
-  };
-
-  // ============================================================
   // Cookie Utilities
   // ============================================================
 
@@ -225,34 +216,36 @@ var WebhookApp = (function ($) {
       });
     },
 
-    syntaxHighlight: function (json) {
-      if (typeof json !== 'string') {
-        json = JSON.stringify(json, null, 2);
+    /**
+     * Creates a badge element
+     * @private
+     */
+    createBadge: function (text, className) {
+      var badge = document.createElement('span');
+      badge.className = 'badge ' + className;
+      badge.textContent = text;
+      return badge;
+    },
+
+    /**
+     * Creates a link element for entity details
+     * @private
+     */
+    createEntityLink: function (href, icon, text) {
+      var link = document.createElement('a');
+      link.href = href;
+      link.className = 'transaction-link';
+
+      var iconEl = document.createElement('i');
+      iconEl.className = icon;
+      link.appendChild(iconEl);
+
+      if (icon.includes('me-1')) {
+        link.appendChild(document.createTextNode(' '));
       }
-      return json
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(
-          /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g,
-          function (match) {
-            var cls = 'json-number';
-            if (/^"/.test(match)) {
-              if (/:$/.test(match)) {
-                cls = 'json-key';
-                match = match.slice(0, -1) + '</span>:';
-                return '<span class="' + cls + '">' + match;
-              } else {
-                cls = 'json-string';
-              }
-            } else if (/true|false/.test(match)) {
-              cls = 'json-boolean';
-            } else if (/null/.test(match)) {
-              cls = 'json-null';
-            }
-            return '<span class="' + cls + '">' + match + '</span>';
-          }
-        );
+      link.appendChild(document.createTextNode(text));
+
+      return link;
     },
 
     createEventElement: function (eventData) {
@@ -327,88 +320,121 @@ var WebhookApp = (function ($) {
         summary += ': ' + launcherIds.length + ' NFT' + (launcherIds.length !== 1 ? 's' : '');
       }
 
-      var html =
-        '<div class="event-item" data-event-id="' +
-        eventId +
-        '">' +
-        '  <div class="event-header">' +
-        '    <div class="event-meta">' +
-        '      <span class="event-time">' +
-        timestamp +
-        '</span>' +
-        '      <span class="badge event-type-badge ' +
-        typeBadge.class +
-        '">' +
-        typeBadge.text +
-        '</span>' +
-        '      <span class="badge verification-badge ' +
-        verifyBadge.class +
-        '">' +
-        verifyBadge.text +
-        '</span>' +
-        (transactionId
-          ? '      <a href="/transaction?transaction_id=' +
-            encodeURIComponent(transactionId) +
-            '" class="transaction-link"><i class="bi bi-box-arrow-up-right"></i>' +
-            transactionId.substring(0, 12) +
-            '...</a>'
-          : '') +
-        (coinIds
-          ? '      <a href="/coins?coin_ids=' +
-            encodeURIComponent(coinIds.join(',')) +
-            '" class="transaction-link"><i class="bi bi-coin me-1"></i>' +
-            coinIds.length +
-            ' coin' +
-            (coinIds.length !== 1 ? 's' : '') +
-            '</a>'
-          : '') +
-        (assetIds
-          ? '      <a href="/assets?asset_ids=' +
-            encodeURIComponent(assetIds.join(',')) +
-            '" class="transaction-link"><i class="bi bi-gem me-1"></i>' +
-            assetIds.length +
-            ' asset' +
-            (assetIds.length !== 1 ? 's' : '') +
-            '</a>'
-          : '') +
-        (launcherIds
-          ? '      <a href="/nfts?launcher_ids=' +
-            encodeURIComponent(launcherIds.join(',')) +
-            '" class="transaction-link"><i class="bi bi-image me-1"></i>' +
-            launcherIds.length +
-            ' NFT' +
-            (launcherIds.length !== 1 ? 's' : '') +
-            '</a>'
-          : '') +
-        '    </div>' +
-        '    <div class="event-actions">' +
-        '      <button class="btn-action" onclick="WebhookApp.copyEvent(\'' +
-        eventId +
-        '\')" title="Copy JSON">' +
-        '        <i class="bi bi-clipboard"></i>' +
-        '      </button>' +
-        '      <button class="btn-action" onclick="WebhookApp.toggleDetails(\'' +
-        eventId +
-        '\')" title="Toggle details">' +
-        '        <i class="bi bi-code-slash"></i>' +
-        '      </button>' +
-        '    </div>' +
-        '  </div>' +
-        '  <div class="event-summary">' +
-        summary +
-        '</div>' +
-        '  <pre class="event-details collapse" id="' +
-        eventId +
-        '-details">' +
-        this.syntaxHighlight(jsonString) +
-        '  </pre>' +
-        '</div>';
+      // Create DOM structure
+      var eventItem = document.createElement('div');
+      eventItem.className = 'event-item';
+      eventItem.setAttribute('data-event-id', eventId);
 
-      // Store raw JSON for copy
-      var el = $(html);
-      el.data('json', jsonString);
+      // Event header container
+      var eventHeader = document.createElement('div');
+      eventHeader.className = 'event-header';
 
-      return el;
+      // Event meta (time, badges, links)
+      var eventMeta = document.createElement('div');
+      eventMeta.className = 'event-meta';
+
+      // Time
+      var timeSpan = document.createElement('span');
+      timeSpan.className = 'event-time';
+      timeSpan.textContent = timestamp;
+      eventMeta.appendChild(timeSpan);
+
+      // Event type badge
+      var typeBadgeEl = this.createBadge(typeBadge.text, 'event-type-badge ' + typeBadge.class);
+      eventMeta.appendChild(typeBadgeEl);
+
+      // Verification badge
+      var verifyBadgeEl = this.createBadge(
+        verifyBadge.text,
+        'verification-badge ' + verifyBadge.class
+      );
+      eventMeta.appendChild(verifyBadgeEl);
+
+      // Transaction link
+      if (transactionId) {
+        var txLink = this.createEntityLink(
+          '/transaction?transaction_id=' + encodeURIComponent(transactionId),
+          'bi bi-box-arrow-up-right',
+          transactionId.substring(0, 12) + '...'
+        );
+        eventMeta.appendChild(txLink);
+      }
+
+      // Coins link
+      if (coinIds) {
+        var coinsLink = this.createEntityLink(
+          '/coins?coin_ids=' + encodeURIComponent(coinIds.join(',')),
+          'bi bi-coin me-1',
+          coinIds.length + ' coin' + (coinIds.length !== 1 ? 's' : '')
+        );
+        eventMeta.appendChild(coinsLink);
+      }
+
+      // Assets link
+      if (assetIds) {
+        var assetsLink = this.createEntityLink(
+          '/assets?asset_ids=' + encodeURIComponent(assetIds.join(',')),
+          'bi bi-gem me-1',
+          assetIds.length + ' asset' + (assetIds.length !== 1 ? 's' : '')
+        );
+        eventMeta.appendChild(assetsLink);
+      }
+
+      // NFTs link
+      if (launcherIds) {
+        var nftsLink = this.createEntityLink(
+          '/nfts?launcher_ids=' + encodeURIComponent(launcherIds.join(',')),
+          'bi bi-image me-1',
+          launcherIds.length + ' NFT' + (launcherIds.length !== 1 ? 's' : '')
+        );
+        eventMeta.appendChild(nftsLink);
+      }
+
+      eventHeader.appendChild(eventMeta);
+
+      // Event actions (copy, toggle)
+      var eventActions = document.createElement('div');
+      eventActions.className = 'event-actions';
+
+      var copyBtn = document.createElement('button');
+      copyBtn.className = 'btn-action';
+      copyBtn.setAttribute('onclick', "WebhookApp.copyEvent('" + eventId + "')");
+      copyBtn.setAttribute('title', 'Copy JSON');
+      var copyIcon = document.createElement('i');
+      copyIcon.className = 'bi bi-clipboard';
+      copyBtn.appendChild(copyIcon);
+      eventActions.appendChild(copyBtn);
+
+      var toggleBtn = document.createElement('button');
+      toggleBtn.className = 'btn-action';
+      toggleBtn.setAttribute('onclick', "WebhookApp.toggleDetails('" + eventId + "')");
+      toggleBtn.setAttribute('title', 'Toggle details');
+      var toggleIcon = document.createElement('i');
+      toggleIcon.className = 'bi bi-code-slash';
+      toggleBtn.appendChild(toggleIcon);
+      eventActions.appendChild(toggleBtn);
+
+      eventHeader.appendChild(eventActions);
+      eventItem.appendChild(eventHeader);
+
+      // Event summary
+      var eventSummaryDiv = document.createElement('div');
+      eventSummaryDiv.className = 'event-summary';
+      eventSummaryDiv.textContent = summary;
+      eventItem.appendChild(eventSummaryDiv);
+
+      // Event details (JSON with syntax highlighting)
+      var eventDetails = document.createElement('pre');
+      eventDetails.className = 'event-details collapse';
+      eventDetails.id = eventId + '-details';
+      renderJsonWithSyntax(eventDetails, displayData);
+      eventItem.appendChild(eventDetails);
+
+      // Convert to jQuery and store JSON data
+      var $el = $(eventItem);
+      $el.data('json', jsonString);
+
+      return $el;
     },
 
     addSystemEvent: function (message, variant) {
@@ -580,7 +606,7 @@ var WebhookApp = (function ($) {
         Cookies.delete('webhookSecret');
       }
 
-      var requestBody = { url: CONFIG.WEBHOOK_URL };
+      var requestBody = { url: AppConfig.WEBHOOK.URL };
       if (State.webhookSecret) {
         requestBody.secret = State.webhookSecret;
       }
@@ -692,7 +718,7 @@ var WebhookApp = (function ($) {
     clearEvents: Events.clear,
 
     copyUrl: function () {
-      UI.copyToClipboard(CONFIG.WEBHOOK_URL, $('[onclick="WebhookApp.copyUrl()"]'));
+      UI.copyToClipboard(AppConfig.WEBHOOK.URL, $('[onclick="WebhookApp.copyUrl()"]'));
     },
 
     copyEvent: function (eventId) {

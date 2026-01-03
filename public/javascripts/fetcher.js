@@ -4,8 +4,6 @@
 
 // Cache for API responses
 var cache = new Map();
-var CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-var MAX_CACHE_SIZE = 50; // Maximum number of cached entries
 
 /**
  * Sleeps for a specified duration
@@ -142,7 +140,7 @@ function fetchWithRetry(url, options) {
  * Evicts old cache entries if cache size exceeds MAX_CACHE_SIZE
  */
 function evictOldCacheEntries() {
-  if (cache.size <= MAX_CACHE_SIZE) return;
+  if (cache.size <= AppConfig.CACHE.MAX_SIZE) return;
 
   // Convert to array, sort by timestamp (oldest first), and remove oldest entries
   var entries = Array.from(cache.entries());
@@ -150,7 +148,7 @@ function evictOldCacheEntries() {
     return a[1].timestamp - b[1].timestamp;
   });
 
-  var entriesToRemove = cache.size - MAX_CACHE_SIZE;
+  var entriesToRemove = cache.size - AppConfig.CACHE.MAX_SIZE;
   for (var i = 0; i < entriesToRemove; i++) {
     cache.delete(entries[i][0]);
   }
@@ -169,7 +167,7 @@ function evictOldCacheEntries() {
  */
 function fetchWithCache(url, options) {
   options = options || {};
-  var cacheTTL = options.cacheTTL !== undefined ? options.cacheTTL : CACHE_TTL;
+  var cacheTTL = options.cacheTTL !== undefined ? options.cacheTTL : AppConfig.CACHE.TTL;
   var skipCache = options.skipCache || false;
 
   // Check cache first (unless skipCache is true)
@@ -239,12 +237,12 @@ function getCacheStats() {
 
   return {
     size: cache.size,
-    maxSize: MAX_CACHE_SIZE,
+    maxSize: AppConfig.CACHE.MAX_SIZE,
     entries: entries.map(function (entry) {
       return {
         url: entry[0],
         age: Math.round((now - entry[1].timestamp) / 1000) + 's',
-        expiresIn: Math.round((CACHE_TTL - (now - entry[1].timestamp)) / 1000) + 's',
+        expiresIn: Math.round((AppConfig.CACHE.TTL - (now - entry[1].timestamp)) / 1000) + 's',
       };
     }),
   };

@@ -38,6 +38,7 @@ export default [
         AppConfig: 'readonly',
         logger: 'readonly',
         createStateManager: 'readonly',
+        createPageModule: 'readonly',
         renderJsonWithSyntax: 'readonly',
         buildUrl: 'readonly',
         fetchWithRetry: 'readonly',
