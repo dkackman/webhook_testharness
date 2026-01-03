@@ -225,9 +225,9 @@ var WebhookApp = (function ($) {
       if (State.events.length > maxEvents) {
         var eventsToRemove = State.events.length - maxEvents;
 
-        // Remove oldest events (from the end of the array)
+        // Remove oldest events (from the beginning of the array)
         for (var i = 0; i < eventsToRemove; i++) {
-          var oldEvent = State.events.pop();
+          var oldEvent = State.events.shift();
 
           // Remove DOM element from the page
           if (oldEvent && oldEvent.el) {
@@ -597,8 +597,8 @@ var WebhookApp = (function ($) {
 
       logger.log('Restoring ' + storedEvents.length + ' events from localStorage');
 
-      // Restore in reverse order (oldest first, so they end up newest on top)
-      for (var i = storedEvents.length - 1; i >= 0; i--) {
+      // Restore in chronological order (oldest first in array, newest on top in DOM)
+      for (var i = 0; i < storedEvents.length; i++) {
         var eventData = storedEvents[i];
 
         State.eventCount++;
@@ -607,6 +607,7 @@ var WebhookApp = (function ($) {
         var $el = this.createEventElement(eventData);
         State.events.push({ el: $el, data: eventData });
 
+        // Prepend each event so newest ends up on top
         $('#webhook-events').prepend($el);
       }
 
