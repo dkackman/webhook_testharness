@@ -45,6 +45,7 @@ export default [
         validateTransactionId: 'readonly',
         validateCoinIds: 'readonly',
         validateAssetIds: 'readonly',
+        validateLauncherIds: 'readonly',
         EventStore: 'readonly',
         SSEManager: 'readonly',
       },

@@ -1,0 +1,81 @@
+extends layout
+
+include mixins/card
+
+block content
+  .container-fluid
+    .d-flex.align-items-center.justify-content-between.mb-3
+      h2.mb-0= title
+      span.badge.text-bg-secondary.small#sse-status(title="Event stream status")
+        i.bi.bi-wifi-off
+
+    script.
+      // Update SSE connection indicator
+      if (window.SSEManager) {
+        SSEManager.onStatusChange(function(status) {
+          var badge = document.getElementById('sse-status');
+          if (!badge) return;
+
+          badge.classList.remove('text-bg-secondary', 'text-bg-success', 'text-bg-warning');
+
+          // Clear and rebuild badge content safely
+          while (badge.firstChild) {
+            badge.removeChild(badge.firstChild);
+          }
+
+          var icon = document.createElement('i');
+          var text = document.createTextNode(' ');
+
+          if (status === 'connected') {
+            badge.classList.add('text-bg-success');
+            icon.className = 'bi bi-wifi';
+            badge.appendChild(icon);
+            badge.appendChild(text);
+            badge.appendChild(document.createTextNode('Events active'));
+          } else if (status === 'connecting') {
+            badge.classList.add('text-bg-warning');
+            icon.className = 'bi bi-wifi';
+            badge.appendChild(icon);
+            badge.appendChild(text);
+            badge.appendChild(document.createTextNode('Connecting...'));
+          } else {
+            badge.classList.add('text-bg-secondary');
+            icon.className = 'bi bi-wifi-off';
+            badge.appendChild(icon);
+            badge.appendChild(text);
+            badge.appendChild(document.createTextNode('Disconnected'));
+          }
+        });
+      }
+
+    //- Launcher IDs Input Form
+    .card.mb-3
+      +cardHeaderSimple('NFT Launcher IDs')
+      .card-body
+        form#nft-form
+          .input-group
+            input#launcher-ids-input.form-control.font-monospace(
+              type="text"
+              placeholder="Enter NFT launcher IDs (comma-separated)"
+              value=launcher_ids
+            )
+            button.btn.btn-primary(type="submit") Lookup
+
+    //- Loading State
+    #loading.text-center.p-4(style="display: none;" role="status" aria-live="polite" aria-label="Loading NFT details")
+      .spinner-border.text-primary.mb-2(role="status" aria-hidden="true")
+        span.visually-hidden Loading...
+      p.text-muted Loading NFT details...
+
+    //- Error State
+    #error.alert.alert-danger(style="display: none;" role="alert" aria-live="assertive")
+      strong Error:
+      span#error-message
+
+    //- NFT Data
+    .card#nfts-container(style="display: none;")
+      +cardHeaderSimple('NFT Details')
+      .card-body.p-0
+        pre#nfts-data.m-0.p-3.font-monospace.small.event-details
+
+  script(src='/javascripts/pages/nfts.js')

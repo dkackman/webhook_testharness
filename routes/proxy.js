@@ -168,4 +168,44 @@ router.get(
   })
 );
 
+/**
+ * GET /proxy/get_nfts
+ * Fetches NFT details by launcher IDs (comma-separated)
+ */
+router.get(
+  '/get_nfts',
+  asyncHandler(async (req, res) => {
+    const launcherIdsParam = req.query.launcher_ids;
+
+    if (!launcherIdsParam) {
+      return res.status(400).json({
+        error: 'Missing launcher_ids query parameter',
+      });
+    }
+
+    // Parse comma-separated launcher IDs
+    const launcherIds = launcherIdsParam
+      .split(',')
+      .map((id) => id.trim())
+      .filter(Boolean);
+
+    if (launcherIds.length === 0) {
+      return res.status(400).json({
+        error: 'No valid launcher IDs provided',
+      });
+    }
+
+    try {
+      const nftData = await sageApi.getNFTsByIds(launcherIds);
+      res.json(nftData);
+    } catch (error) {
+      console.error('Error getting NFTs:', error);
+      res.status(500).json({
+        error: 'Failed to get NFTs',
+        message: error.message,
+      });
+    }
+  })
+);
+
 export default router;

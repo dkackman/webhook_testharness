@@ -199,6 +199,7 @@ var WebhookApp = (function ($) {
         transaction_confirmed: { text: 'TX Confirmed', class: 'text-bg-success' },
         coins_updated: { text: 'Coins Updated', class: 'text-bg-warning' },
         cat_info: { text: 'CAT Info', class: 'text-bg-purple' },
+        nft_data: { text: 'NFT Data', class: 'text-bg-purple' },
         wallet_sync: { text: 'Wallet Sync', class: 'text-bg-primary' },
       };
       return badges[eventType] || { text: eventType || 'Event', class: 'text-bg-secondary' };
@@ -271,6 +272,7 @@ var WebhookApp = (function ($) {
       var transactionId = null;
       var coinIds = null;
       var assetIds = null;
+      var launcherIds = null;
 
       if (
         (eventType === 'transaction_updated' || eventType === 'transaction_confirmed') &&
@@ -298,6 +300,15 @@ var WebhookApp = (function ($) {
         assetIds = parsedData.body.data.asset_ids;
       }
 
+      if (
+        eventType === 'nft_data' &&
+        parsedData.body.data &&
+        parsedData.body.data.launcher_ids &&
+        parsedData.body.data.launcher_ids.length > 0
+      ) {
+        launcherIds = parsedData.body.data.launcher_ids;
+      }
+
       var typeBadge = this.getEventTypeBadge(eventType);
       var verifyBadge = this.getVerificationBadge(verification);
       var timestamp = this.formatTime(new Date());
@@ -312,6 +323,8 @@ var WebhookApp = (function ($) {
         summary += ': ' + coinIds.length + ' coin' + (coinIds.length !== 1 ? 's' : '');
       } else if (assetIds) {
         summary += ': ' + assetIds.length + ' asset' + (assetIds.length !== 1 ? 's' : '');
+      } else if (launcherIds) {
+        summary += ': ' + launcherIds.length + ' NFT' + (launcherIds.length !== 1 ? 's' : '');
       }
 
       var html =
@@ -356,6 +369,15 @@ var WebhookApp = (function ($) {
             assetIds.length +
             ' asset' +
             (assetIds.length !== 1 ? 's' : '') +
+            '</a>'
+          : '') +
+        (launcherIds
+          ? '      <a href="/nfts?launcher_ids=' +
+            encodeURIComponent(launcherIds.join(',')) +
+            '" class="transaction-link"><i class="bi bi-image me-1"></i>' +
+            launcherIds.length +
+            ' NFT' +
+            (launcherIds.length !== 1 ? 's' : '') +
             '</a>'
           : '') +
         '    </div>' +

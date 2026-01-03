@@ -48,4 +48,15 @@ router.get('/assets', (req, res) => {
   });
 });
 
+/**
+ * GET /nfts
+ * Renders the NFT details page
+ */
+router.get('/nfts', (req, res) => {
+  res.render('nfts', {
+    title: 'NFT Details',
+    launcher_ids: req.query.launcher_ids || '',
+  });
+});
+
 export default router;

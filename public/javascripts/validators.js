@@ -111,6 +111,15 @@ function validateAssetIds(value) {
 }
 
 /**
+ * Validates a list of launcher IDs (NFT IDs - 64 hex characters each)
+ * @param {string} value - Comma-separated launcher IDs
+ * @returns {Object} Validation result
+ */
+function validateLauncherIds(value) {
+  return validateHexList(value, 64);
+}
+
+/**
  * Sanitizes user input to prevent XSS
  * @param {string} value - The value to sanitize
  * @returns {string} Sanitized value
@@ -133,6 +142,7 @@ if (typeof window !== 'undefined') {
   window.validateTransactionId = validateTransactionId;
   window.validateCoinIds = validateCoinIds;
   window.validateAssetIds = validateAssetIds;
+  window.validateLauncherIds = validateLauncherIds;
   window.sanitizeInput = sanitizeInput;
 }
 
@@ -144,6 +154,7 @@ if (typeof module !== 'undefined' && module.exports) {
     validateTransactionId: validateTransactionId,
     validateCoinIds: validateCoinIds,
     validateAssetIds: validateAssetIds,
+    validateLauncherIds: validateLauncherIds,
     sanitizeInput: sanitizeInput,
   };
 }

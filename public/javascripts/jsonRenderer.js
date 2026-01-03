@@ -25,6 +25,7 @@ function createColoredSpan(text, className) {
 function createFieldLink(key, value, className) {
   var linkConfigs = {
     asset_hash: { route: '/assets', param: 'asset_ids' },
+    launcher_id: { route: '/nfts', param: 'launcher_ids' },
     // Add more linkable fields here as needed
     // 'coin_id': { route: '/coins', param: 'coin_ids' }
   };

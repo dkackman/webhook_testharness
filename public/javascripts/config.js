@@ -21,6 +21,7 @@ var AppConfig = {
     GET_COINS: '/proxy/get_coins',
     GET_TRANSACTION: '/proxy/get_transaction',
     GET_ASSETS: '/proxy/get_assets',
+    GET_NFTS: '/proxy/get_nfts',
   },
 
   // Page routes
@@ -28,6 +29,7 @@ var AppConfig = {
     ASSETS: '/assets',
     COINS: '/coins',
     TRANSACTION: '/transaction',
+    NFTS: '/nfts',
   },
 
   // Timeout settings (in milliseconds)

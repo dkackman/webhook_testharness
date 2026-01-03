@@ -176,3 +176,17 @@ export async function getAssetsByIds(assetIds) {
 
   return result.data;
 }
+
+/**
+ * Get NFT details by launcher IDs
+ * @param {string[]} launcherIds - Array of launcher IDs to fetch
+ * @returns {Promise<Object>} NFT data
+ */
+export async function getNFTsByIds(launcherIds) {
+  const result = await makeRequest({
+    path: '/get_nfts_by_ids',
+    body: { launcher_ids: launcherIds },
+  });
+
+  return result.data;
+}
