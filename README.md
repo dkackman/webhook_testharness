@@ -26,8 +26,8 @@ Create a `.env` file in the root directory with your mTLS certificate configurat
 
 ```env
 # Option 1: Use certificate file paths
-CLIENT_CERT_PATH=/path/to/client-cert.pem
-CLIENT_KEY_PATH=/path/to/client-key.pem
+CLIENT_CERT_PATH=/Users/<USER>/Library/Application Support/com.rigidnetwork.sage/ssl/wallet.crt
+CLIENT_KEY_PATH=/Users/<USER>/Library/Application Support/com.rigidnetwork.sage/ssl/wallet.key
 
 # Option 2: Use certificate content directly
 CLIENT_CERT="-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----"
