@@ -73,6 +73,7 @@ block content
         var pattern = /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g;
         var lastIndex = 0;
         var result;
+        var lastKey = null;
 
         while ((result = pattern.test(jsonStr), pattern.lastIndex > lastIndex || result)) {
           if (!result) break;
@@ -87,13 +88,29 @@ block content
           if (/^"/.test(value)) {
             if (/:$/.test(value)) {
               cls = 'json-key';
+              lastKey = value.replace(/^"|":$/g, '');
             } else {
               cls = 'json-string';
+              if (lastKey === 'asset_hash') {
+                var hash = value.replace(/^"|"$/g, '');
+                var link = document.createElement('a');
+                link.href = '/assets?asset_ids=' + encodeURIComponent(hash);
+                link.target = '_blank';
+                link.className = cls;
+                link.textContent = value;
+                fragment.appendChild(link);
+                lastIndex = pattern.lastIndex;
+                lastKey = null;
+                continue;
+              }
+              lastKey = null;
             }
           } else if (/true|false/.test(value)) {
             cls = 'json-boolean';
+            lastKey = null;
           } else if (/null/.test(value)) {
             cls = 'json-null';
+            lastKey = null;
           }
 
           fragment.appendChild(createColoredSpan(value, cls));
