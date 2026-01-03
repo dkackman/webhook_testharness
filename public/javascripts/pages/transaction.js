@@ -1,7 +1,7 @@
 /**
  * Transaction page functionality
  */
-(function() {
+(function () {
   'use strict';
 
   // DOM elements
@@ -14,7 +14,7 @@
     error: 'error',
     errorMessage: 'error-message',
     container: 'transaction-container',
-    data: 'transaction-data'
+    data: 'transaction-data',
   });
 
   var inputCoinsState = createStateManager({
@@ -22,7 +22,7 @@
     loading: 'input-coins-loading',
     error: 'input-coins-error',
     errorMessage: 'input-coins-error-message',
-    data: 'input-coins-data'
+    data: 'input-coins-data',
   });
 
   var outputCoinsState = createStateManager({
@@ -30,7 +30,7 @@
     loading: 'output-coins-loading',
     error: 'output-coins-error',
     errorMessage: 'output-coins-error-message',
-    data: 'output-coins-data'
+    data: 'output-coins-data',
   });
 
   /**
@@ -47,11 +47,11 @@
     var fetchUrl = buildUrl(AppConfig.API.GET_COINS, { coin_ids: coinIdsParam });
 
     fetchWithCache(fetchUrl, { maxRetries: 2 })
-      .then(function(coinsData) {
+      .then(function (coinsData) {
         state.showData();
         renderJsonWithSyntax(state.elements.data, coinsData);
       })
-      .catch(function(error) {
+      .catch(function (error) {
         logger.error('Failed to fetch ' + type + ' coins:', error);
         state.showError('Failed to fetch ' + type + ' coins: ' + error.message);
       });
@@ -107,7 +107,7 @@
     var fetchUrl = buildUrl(AppConfig.API.GET_TRANSACTION, { transaction_id: transactionId });
     fetchWithCache(fetchUrl, { maxRetries: 2 })
       .then(showData)
-      .catch(function(error) {
+      .catch(function (error) {
         logger.error('Failed to fetch transaction:', error);
         mainState.showError('Failed to fetch transaction: ' + error.message);
       });

@@ -48,7 +48,6 @@ var WebhookApp = (function ($) {
   var State = {
     webhookId: Cookies.get('webhookId'),
     webhookSecret: Cookies.get('webhookSecret'),
-    eventSource: null,
     eventCount: 0,
     isPaused: false,
     currentFilter: 'all',
@@ -337,14 +336,14 @@ var WebhookApp = (function ($) {
         (transactionId
           ? '      <a href="/transaction?transaction_id=' +
             encodeURIComponent(transactionId) +
-            '" target="_blank" class="transaction-link"><i class="bi bi-box-arrow-up-right"></i>' +
+            '" class="transaction-link"><i class="bi bi-box-arrow-up-right"></i>' +
             transactionId.substring(0, 12) +
             '...</a>'
           : '') +
         (coinIds
           ? '      <a href="/coins?coin_ids=' +
             encodeURIComponent(coinIds.join(',')) +
-            '" target="_blank" class="transaction-link"><i class="bi bi-coin me-1"></i>' +
+            '" class="transaction-link"><i class="bi bi-coin me-1"></i>' +
             coinIds.length +
             ' coin' +
             (coinIds.length !== 1 ? 's' : '') +
@@ -353,7 +352,7 @@ var WebhookApp = (function ($) {
         (assetIds
           ? '      <a href="/assets?asset_ids=' +
             encodeURIComponent(assetIds.join(',')) +
-            '" target="_blank" class="transaction-link"><i class="bi bi-gem me-1"></i>' +
+            '" class="transaction-link"><i class="bi bi-gem me-1"></i>' +
             assetIds.length +
             ' asset' +
             (assetIds.length !== 1 ? 's' : '') +
@@ -407,7 +406,7 @@ var WebhookApp = (function ($) {
       $('#webhook-events').prepend(html);
     },
 
-    addWebhookEvent: function (eventData) {
+    addWebhookEvent: function (eventData, skipPersist) {
       if (State.isPaused) return;
 
       State.eventCount++;
@@ -423,6 +422,64 @@ var WebhookApp = (function ($) {
       if (State.currentFilter !== 'all') {
         UI.applyFilter(State.currentFilter);
       }
+
+      // Persist to localStorage (unless already saved by SSEManager)
+      if (!skipPersist) {
+        this.persistEvents();
+      }
+    },
+
+    persistEvents: function () {
+      if (!window.EventStore || !EventStore.isEnabled()) {
+        return;
+      }
+
+      // Extract just the serializable data (not DOM elements)
+      var serializableEvents = State.events.map(function (item) {
+        return item.data;
+      });
+
+      EventStore.saveEvents(serializableEvents);
+    },
+
+    restoreEvents: function () {
+      if (!window.EventStore || !EventStore.isEnabled()) {
+        return;
+      }
+
+      var storedEvents = EventStore.loadEvents();
+
+      if (storedEvents.length === 0) {
+        return;
+      }
+
+      logger.log('Restoring ' + storedEvents.length + ' events from localStorage');
+
+      // Restore in reverse order (oldest first, so they end up newest on top)
+      for (var i = storedEvents.length - 1; i >= 0; i--) {
+        var eventData = storedEvents[i];
+
+        State.eventCount++;
+        UI.clearPlaceholder();
+
+        var $el = this.createEventElement(eventData);
+        State.events.push({ el: $el, data: eventData });
+
+        $('#webhook-events').prepend($el);
+      }
+
+      UI.updateEventCounter();
+
+      // Apply current filter
+      if (State.currentFilter !== 'all') {
+        UI.applyFilter(State.currentFilter);
+      }
+
+      // Show system message about restored events
+      this.addSystemEvent(
+        'Restored ' + storedEvents.length + ' events from previous session',
+        'info'
+      );
     },
 
     clear: function () {
@@ -430,44 +487,44 @@ var WebhookApp = (function ($) {
       State.eventCount = 0;
       UI.updateEventCounter();
       UI.showPlaceholder();
+
+      // Clear persisted events from localStorage
+      if (window.EventStore && EventStore.isEnabled()) {
+        EventStore.clearEvents();
+        logger.log('Cleared persisted events from localStorage');
+      }
     },
   };
 
   // ============================================================
-  // Server-Sent Events
+  // Server-Sent Events (using global SSEManager)
   // ============================================================
 
   var SSE = {
     setup: function () {
-      UI.updateConnectionStatus('connecting');
-      State.eventSource = new EventSource('/events');
-
-      State.eventSource.onopen = function () {
-        UI.updateConnectionStatus('connected');
-        Events.addSystemEvent('Connected to event stream', 'success');
-      };
-
-      State.eventSource.addEventListener('webhook', function (event) {
-        Events.addWebhookEvent({
-          id: Date.now(),
-          event: 'webhook',
-          data: event.data,
-          timestamp: new Date().toISOString(),
-        });
+      // Monitor connection status from global SSEManager
+      SSEManager.onStatusChange(function (status) {
+        if (status === 'connected') {
+          UI.updateConnectionStatus('connected');
+          Events.addSystemEvent('Connected to event stream', 'success');
+        } else if (status === 'connecting') {
+          UI.updateConnectionStatus('connecting');
+        } else if (status === 'disconnected') {
+          UI.updateConnectionStatus('disconnected');
+        }
       });
 
-      State.eventSource.onerror = function () {
-        UI.updateConnectionStatus('disconnected');
-        Events.addSystemEvent('Connection lost. Reconnecting...', 'warning');
+      // Listen for webhook events from global SSEManager
+      window.addEventListener('webhook-received', function (customEvent) {
+        var eventData = customEvent.detail;
+        // Pass skipPersist=true because SSEManager already saved to localStorage
+        Events.addWebhookEvent(eventData, true);
+      });
 
-        if (State.eventSource) {
-          State.eventSource.close();
-        }
-
-        setTimeout(function () {
-          SSE.setup();
-        }, CONFIG.RECONNECT_DELAY);
-      };
+      // Ensure connection is active
+      if (!SSEManager.isActive()) {
+        SSEManager.connect();
+      }
     },
   };
 
@@ -572,6 +629,10 @@ var WebhookApp = (function ($) {
 
     UI.updateButtonStates();
     UI.updateEventCounter();
+
+    // Restore events from localStorage before connecting to SSE
+    Events.restoreEvents();
+
     SSE.setup();
 
     // Event handlers
@@ -596,11 +657,8 @@ var WebhookApp = (function ($) {
 
   $(document).ready(init);
 
-  $(window).on('beforeunload', function () {
-    if (State.eventSource) {
-      State.eventSource.close();
-    }
-  });
+  // Note: Connection is now managed globally by SSEManager
+  // It persists across page navigation
 
   // ============================================================
   // Public API
@@ -627,5 +685,20 @@ var WebhookApp = (function ($) {
     },
 
     togglePause: UI.togglePause,
+
+    exportEvents: function () {
+      if (window.EventStore && EventStore.isEnabled()) {
+        EventStore.exportEvents();
+      }
+    },
+
+    getStorageStats: function () {
+      if (window.EventStore && EventStore.isEnabled()) {
+        var stats = EventStore.getStats();
+        logger.log('Event Storage Stats:', stats);
+        return stats;
+      }
+      return null;
+    },
   };
 })(jQuery);

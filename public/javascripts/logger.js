@@ -8,7 +8,7 @@
  * @returns {Object} Logger with error, warn, info, log methods
  */
 function createLogger() {
-  var isDebug = function() {
+  var isDebug = function () {
     return window.AppConfig && window.AppConfig.DEBUG;
   };
 
@@ -17,7 +17,7 @@ function createLogger() {
      * Logs an error message (only in debug mode)
      * @param {...*} args - Arguments to log
      */
-    error: function() {
+    error: function () {
       if (isDebug()) {
         console.error.apply(console, arguments);
       }
@@ -27,7 +27,7 @@ function createLogger() {
      * Logs a warning message (only in debug mode)
      * @param {...*} args - Arguments to log
      */
-    warn: function() {
+    warn: function () {
       if (isDebug()) {
         console.warn.apply(console, arguments);
       }
@@ -37,7 +37,7 @@ function createLogger() {
      * Logs an info message (only in debug mode)
      * @param {...*} args - Arguments to log
      */
-    info: function() {
+    info: function () {
       if (isDebug()) {
         console.info.apply(console, arguments);
       }
@@ -47,7 +47,7 @@ function createLogger() {
      * Logs a general message (only in debug mode)
      * @param {...*} args - Arguments to log
      */
-    log: function() {
+    log: function () {
       if (isDebug()) {
         console.log.apply(console, arguments);
       }
@@ -57,7 +57,7 @@ function createLogger() {
      * Logs a debug message (only in debug mode)
      * @param {...*} args - Arguments to log
      */
-    debug: function() {
+    debug: function () {
       if (isDebug()) {
         console.debug.apply(console, arguments);
       }
@@ -67,9 +67,9 @@ function createLogger() {
      * Returns whether debug mode is enabled
      * @returns {boolean}
      */
-    isDebugEnabled: function() {
+    isDebugEnabled: function () {
       return isDebug();
-    }
+    },
   };
 }
 

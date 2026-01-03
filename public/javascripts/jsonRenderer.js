@@ -24,7 +24,7 @@ function createColoredSpan(text, className) {
  */
 function createFieldLink(key, value, className) {
   var linkConfigs = {
-    'asset_hash': { route: '/assets', param: 'asset_ids' }
+    asset_hash: { route: '/assets', param: 'asset_ids' },
     // Add more linkable fields here as needed
     // 'coin_id': { route: '/coins', param: 'coin_ids' }
   };
@@ -35,7 +35,6 @@ function createFieldLink(key, value, className) {
   var cleanValue = value.replace(/^"|"$/g, '');
   var link = document.createElement('a');
   link.href = config.route + '?' + config.param + '=' + encodeURIComponent(cleanValue);
-  link.target = '_blank';
   link.className = className;
   link.textContent = value;
   return link;
@@ -50,7 +49,8 @@ function renderJsonWithSyntax(container, data) {
   container.textContent = '';
   var jsonStr = JSON.stringify(data, null, 2);
   var fragment = document.createDocumentFragment();
-  var pattern = /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g;
+  var pattern =
+    /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g;
   var lastIndex = 0;
   var lastKey = null;
   var match;

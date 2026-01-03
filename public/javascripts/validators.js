@@ -22,7 +22,10 @@ function validateHexString(value, exactLength) {
   // Check if it's a valid hex string
   var hexPattern = /^[0-9a-fA-F]+$/;
   if (!hexPattern.test(trimmed)) {
-    return { valid: false, error: 'Value must contain only hexadecimal characters (0-9, a-f, A-F)' };
+    return {
+      valid: false,
+      error: 'Value must contain only hexadecimal characters (0-9, a-f, A-F)',
+    };
   }
 
   // Check exact length if specified
@@ -56,10 +59,14 @@ function validateHexList(value, exactLength) {
   }
 
   // Split by comma and trim each
-  var ids = trimmed.split(',').map(function(id) { return id.trim(); });
+  var ids = trimmed.split(',').map(function (id) {
+    return id.trim();
+  });
 
   // Remove empty strings
-  ids = ids.filter(function(id) { return id.length > 0; });
+  ids = ids.filter(function (id) {
+    return id.length > 0;
+  });
 
   if (ids.length === 0) {
     return { valid: false, error: 'At least one valid ID is required' };
@@ -137,6 +144,6 @@ if (typeof module !== 'undefined' && module.exports) {
     validateTransactionId: validateTransactionId,
     validateCoinIds: validateCoinIds,
     validateAssetIds: validateAssetIds,
-    sanitizeInput: sanitizeInput
+    sanitizeInput: sanitizeInput,
   };
 }

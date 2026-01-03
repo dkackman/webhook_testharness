@@ -13,7 +13,7 @@ var MAX_CACHE_SIZE = 50; // Maximum number of cached entries
  * @returns {Promise<void>}
  */
 function sleep(ms) {
-  return new Promise(function(resolve) {
+  return new Promise(function (resolve) {
     setTimeout(resolve, ms);
   });
 }
@@ -50,22 +50,25 @@ function fetchWithTimeout(url, timeout) {
   timeout = timeout || (window.AppConfig && window.AppConfig.TIMEOUTS.FETCH) || 10000;
 
   var controller = new AbortController();
-  var timeoutId = setTimeout(function() {
+  var timeoutId = setTimeout(function () {
     controller.abort();
   }, timeout);
 
   return fetch(url, { signal: controller.signal })
-    .then(function(response) {
+    .then(function (response) {
       clearTimeout(timeoutId);
       if (!response.ok) {
         var statusCode = response.status;
-        return response.json()
-          .then(function(err) {
-            var error = new Error(err.message || err.error || 'Request failed with status ' + statusCode);
+        return response
+          .json()
+          .then(function (err) {
+            var error = new Error(
+              err.message || err.error || 'Request failed with status ' + statusCode
+            );
             error.statusCode = statusCode;
             throw error;
           })
-          .catch(function(parseError) {
+          .catch(function (parseError) {
             // If JSON parsing fails, throw original error with status
             if (parseError.statusCode) throw parseError;
             var error = new Error('Request failed with status ' + statusCode);
@@ -75,10 +78,12 @@ function fetchWithTimeout(url, timeout) {
       }
       return response.json();
     })
-    .catch(function(error) {
+    .catch(function (error) {
       clearTimeout(timeoutId);
       if (error.name === 'AbortError') {
-        var timeoutError = new Error((window.AppConfig && window.AppConfig.ERRORS.FETCH_TIMEOUT) || 'Request timed out');
+        var timeoutError = new Error(
+          (window.AppConfig && window.AppConfig.ERRORS.FETCH_TIMEOUT) || 'Request timed out'
+        );
         timeoutError.name = 'AbortError';
         throw timeoutError;
       }
@@ -102,25 +107,32 @@ function fetchWithRetry(url, options) {
   var timeout = options.timeout;
 
   function attempt(retryCount) {
-    return fetchWithTimeout(url, timeout)
-      .catch(function(error) {
-        var shouldRetry = isRetryableError(error, error.statusCode);
+    return fetchWithTimeout(url, timeout).catch(function (error) {
+      var shouldRetry = isRetryableError(error, error.statusCode);
 
-        if (shouldRetry && retryCount < maxRetries) {
-          // Exponential backoff: delay * 2^retryCount
-          var delay = initialDelay * Math.pow(2, retryCount);
-          if (window.logger) {
-            window.logger.warn('Request failed, retrying in ' + delay + 'ms... (attempt ' + (retryCount + 1) + '/' + maxRetries + ')');
-          }
-
-          return sleep(delay).then(function() {
-            return attempt(retryCount + 1);
-          });
+      if (shouldRetry && retryCount < maxRetries) {
+        // Exponential backoff: delay * 2^retryCount
+        var delay = initialDelay * Math.pow(2, retryCount);
+        if (window.logger) {
+          window.logger.warn(
+            'Request failed, retrying in ' +
+              delay +
+              'ms... (attempt ' +
+              (retryCount + 1) +
+              '/' +
+              maxRetries +
+              ')'
+          );
         }
 
-        // No more retries or non-retryable error
-        throw error;
-      });
+        return sleep(delay).then(function () {
+          return attempt(retryCount + 1);
+        });
+      }
+
+      // No more retries or non-retryable error
+      throw error;
+    });
   }
 
   return attempt(0);
@@ -134,7 +146,7 @@ function evictOldCacheEntries() {
 
   // Convert to array, sort by timestamp (oldest first), and remove oldest entries
   var entries = Array.from(cache.entries());
-  entries.sort(function(a, b) {
+  entries.sort(function (a, b) {
     return a[1].timestamp - b[1].timestamp;
   });
 
@@ -165,7 +177,7 @@ function fetchWithCache(url, options) {
     var cached = cache.get(url);
     var now = Date.now();
 
-    if (cached && (now - cached.timestamp < cacheTTL)) {
+    if (cached && now - cached.timestamp < cacheTTL) {
       if (window.logger) {
         window.logger.log('Using cached data for:', url);
       }
@@ -174,19 +186,18 @@ function fetchWithCache(url, options) {
   }
 
   // Fetch fresh data
-  return fetchWithRetry(url, options)
-    .then(function(data) {
-      // Store in cache
-      cache.set(url, {
-        data: data,
-        timestamp: Date.now()
-      });
-
-      // Evict old entries if cache is too large
-      evictOldCacheEntries();
-
-      return data;
+  return fetchWithRetry(url, options).then(function (data) {
+    // Store in cache
+    cache.set(url, {
+      data: data,
+      timestamp: Date.now(),
     });
+
+    // Evict old entries if cache is too large
+    evictOldCacheEntries();
+
+    return data;
+  });
 }
 
 /**
@@ -207,7 +218,7 @@ function clearCachePattern(pattern) {
   var regex = typeof pattern === 'string' ? new RegExp(pattern) : pattern;
   var keys = Array.from(cache.keys());
 
-  keys.forEach(function(key) {
+  keys.forEach(function (key) {
     if (regex.test(key)) {
       cache.delete(key);
     }
@@ -229,13 +240,13 @@ function getCacheStats() {
   return {
     size: cache.size,
     maxSize: MAX_CACHE_SIZE,
-    entries: entries.map(function(entry) {
+    entries: entries.map(function (entry) {
       return {
         url: entry[0],
         age: Math.round((now - entry[1].timestamp) / 1000) + 's',
-        expiresIn: Math.round((CACHE_TTL - (now - entry[1].timestamp)) / 1000) + 's'
+        expiresIn: Math.round((CACHE_TTL - (now - entry[1].timestamp)) / 1000) + 's',
       };
-    })
+    }),
   };
 }
 
@@ -248,8 +259,10 @@ function getCacheStats() {
 function buildUrl(baseUrl, params) {
   var url = baseUrl;
   var queryString = Object.keys(params)
-    .filter(function(key) { return params[key] != null; })
-    .map(function(key) {
+    .filter(function (key) {
+      return params[key] != null;
+    })
+    .map(function (key) {
       return encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
     })
     .join('&');
@@ -280,6 +293,6 @@ if (typeof module !== 'undefined' && module.exports) {
     buildUrl: buildUrl,
     clearCache: clearCache,
     clearCachePattern: clearCachePattern,
-    getCacheStats: getCacheStats
+    getCacheStats: getCacheStats,
   };
 }

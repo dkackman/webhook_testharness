@@ -1,7 +1,7 @@
 /**
  * Coins page functionality
  */
-(function() {
+(function () {
   'use strict';
 
   // DOM elements
@@ -14,7 +14,7 @@
     error: 'error',
     errorMessage: 'error-message',
     container: 'coins-container',
-    data: 'coins-data'
+    data: 'coins-data',
   });
 
   /**
@@ -53,7 +53,7 @@
     var fetchUrl = buildUrl(AppConfig.API.GET_COINS, { coin_ids: coinIds });
     fetchWithCache(fetchUrl, { maxRetries: 2 })
       .then(showData)
-      .catch(function(error) {
+      .catch(function (error) {
         logger.error('Failed to fetch coins:', error);
         mainState.showError('Failed to fetch coins: ' + error.message);
       });

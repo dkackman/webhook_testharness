@@ -16,6 +16,28 @@ block content
         button.btn.btn-sm.btn-outline-secondary#pause-btn(type="button" title="Pause event capture")
           i.bi.bi-pause-fill
         button.btn.btn-sm.btn-outline-secondary(type="button" onclick="WebhookApp.clearEvents()" title="Clear events") Clear
+        //- Event storage dropdown
+        .dropdown
+          button.btn.btn-sm.btn-outline-secondary.dropdown-toggle(type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Event storage options")
+            i.bi.bi-database
+          ul.dropdown-menu.dropdown-menu-end
+            li
+              a.dropdown-item(href="#" onclick="WebhookApp.exportEvents(); return false;")
+                i.bi.bi-download.me-2
+                | Export Events
+            li
+              a.dropdown-item(href="#" onclick="WebhookApp.getStorageStats(); return false;")
+                i.bi.bi-info-circle.me-2
+                | Storage Stats (Console)
+            li
+              hr.dropdown-divider
+            li
+              h6.dropdown-header Event Persistence
+            li
+              span.dropdown-item-text.small.text-muted
+                | Max: 100 events (FIFO)
+                br
+                | Auto-saved to localStorage
 
     //- Collapsible Setup Panel
     .card.mb-3#setup-panel

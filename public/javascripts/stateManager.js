@@ -53,7 +53,9 @@ function setState(elements, state, message) {
 
     default:
       if (window.logger) {
-        window.logger.error('setState: Invalid state "' + state + '". Must be "loading", "error", "data", or "hidden"');
+        window.logger.error(
+          'setState: Invalid state "' + state + '". Must be "loading", "error", "data", or "hidden"'
+        );
       }
   }
 }
@@ -74,23 +76,23 @@ function createStateManager(elementIds) {
     loading: elementIds.loading ? document.getElementById(elementIds.loading) : null,
     error: elementIds.error ? document.getElementById(elementIds.error) : null,
     errorMessage: elementIds.errorMessage ? document.getElementById(elementIds.errorMessage) : null,
-    data: elementIds.data ? document.getElementById(elementIds.data) : null
+    data: elementIds.data ? document.getElementById(elementIds.data) : null,
   };
 
   return {
-    showLoading: function() {
+    showLoading: function () {
       setState(elements, 'loading');
     },
-    showError: function(message) {
+    showError: function (message) {
       setState(elements, 'error', message);
     },
-    showData: function() {
+    showData: function () {
       setState(elements, 'data');
     },
-    hide: function() {
+    hide: function () {
       setState(elements, 'hidden');
     },
-    elements: elements
+    elements: elements,
   };
 }
 

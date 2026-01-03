@@ -1,7 +1,7 @@
 /**
  * Assets page functionality
  */
-(function() {
+(function () {
   'use strict';
 
   // DOM elements
@@ -14,7 +14,7 @@
     error: 'error',
     errorMessage: 'error-message',
     container: 'assets-container',
-    data: 'assets-data'
+    data: 'assets-data',
   });
 
   /**
@@ -53,7 +53,7 @@
     var fetchUrl = buildUrl(AppConfig.API.GET_ASSETS, { asset_ids: assetIds });
     fetchWithCache(fetchUrl, { maxRetries: 2 })
       .then(showData)
-      .catch(function(error) {
+      .catch(function (error) {
         logger.error('Failed to fetch assets:', error);
         mainState.showError('Failed to fetch assets: ' + error.message);
       });

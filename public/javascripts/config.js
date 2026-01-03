@@ -7,38 +7,48 @@ var AppConfig = {
   // Enabled when:
   // - Running on localhost
   // - URL contains ?debug=true
-  DEBUG: (function() {
+  DEBUG: (function () {
     if (typeof window === 'undefined') return false;
-    return window.location.hostname === 'localhost' ||
-           window.location.hostname === '127.0.0.1' ||
-           window.location.search.includes('debug=true');
+    return (
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.search.includes('debug=true')
+    );
   })(),
 
   // API endpoints
   API: {
     GET_COINS: '/proxy/get_coins',
     GET_TRANSACTION: '/proxy/get_transaction',
-    GET_ASSETS: '/proxy/get_assets'
+    GET_ASSETS: '/proxy/get_assets',
   },
 
   // Page routes
   ROUTES: {
     ASSETS: '/assets',
     COINS: '/coins',
-    TRANSACTION: '/transaction'
+    TRANSACTION: '/transaction',
   },
 
   // Timeout settings (in milliseconds)
   TIMEOUTS: {
-    FETCH: 10000  // 10 seconds
+    FETCH: 10000, // 10 seconds
   },
 
   // Error messages
   ERRORS: {
     FETCH_TIMEOUT: 'Request timed out. Please try again.',
     NETWORK_ERROR: 'Network error. Please check your connection.',
-    GENERIC: 'An error occurred. Please try again.'
-  }
+    GENERIC: 'An error occurred. Please try again.',
+  },
+
+  // Event persistence settings
+  EVENT_STORAGE: {
+    ENABLED: true, // Enable event persistence across page loads
+    MAX_EVENTS: 100, // Maximum number of events to store (FIFO)
+    STORAGE_KEY: 'webhook_events', // localStorage key
+    AUTO_RESTORE: true, // Auto-restore events on page load
+  },
 };
 
 // Make available globally
