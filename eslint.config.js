@@ -51,6 +51,11 @@ export default [
         EventStore: 'readonly',
         SSEManager: 'readonly',
         initSseStatusBadge: 'readonly',
+        buildErrorMessage: 'readonly',
+        createFetchErrorHandler: 'readonly',
+        createFormSubmitHandler: 'readonly',
+        autoLoadFromUrl: 'readonly',
+        updateUrlParam: 'readonly',
       },
     },
     rules: {

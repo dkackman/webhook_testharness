@@ -94,9 +94,7 @@ function createPageModule(config) {
     mainState.showLoading();
 
     // Update URL
-    var url = new URL(window.location);
-    url.searchParams.set(config.urlParamName, ids);
-    window.history.pushState({}, '', url);
+    updateUrlParam(config.urlParamName, ids);
 
     // Build fetch URL
     var params = {};
@@ -106,22 +104,7 @@ function createPageModule(config) {
     // Fetch with caching and retry logic
     fetchWithCache(fetchUrl, { maxRetries: 2 })
       .then(showData)
-      .catch(function (error) {
-        logger.error('Failed to fetch ' + config.entityType + ':', error);
-        mainState.showError('Failed to fetch ' + config.entityType + ': ' + error.message);
-      });
-  }
-
-  /**
-   * Handles form submission
-   * @param {Event} e - The submit event
-   */
-  function handleSubmit(e) {
-    e.preventDefault();
-    var ids = $input.value.trim();
-    if (ids) {
-      fetchData(ids);
-    }
+      .catch(createFetchErrorHandler(config.entityType, mainState));
   }
 
   /**
@@ -129,15 +112,10 @@ function createPageModule(config) {
    */
   function init() {
     // Event listeners
-    $form.addEventListener('submit', handleSubmit);
+    $form.addEventListener('submit', createFormSubmitHandler($input, fetchData));
 
     // Auto-fetch if parameter in URL
-    var urlParams = new URLSearchParams(window.location.search);
-    var initialIds = urlParams.get(config.urlParamName);
-    if (initialIds) {
-      $input.value = initialIds;
-      fetchData(initialIds);
-    }
+    autoLoadFromUrl(config.urlParamName, $input, fetchData);
   }
 
   // Public API

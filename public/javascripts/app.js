@@ -14,8 +14,20 @@ var WebhookApp = (function ($) {
     set: function (name, value, days) {
       days = days || 365;
       var expires = new Date(Date.now() + days * 864e5).toUTCString();
-      document.cookie =
-        name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/';
+      var cookieStr =
+        name +
+        '=' +
+        encodeURIComponent(value) +
+        '; expires=' +
+        expires +
+        '; path=/; SameSite=Strict';
+
+      // Add Secure flag if served over HTTPS
+      if (window.location.protocol === 'https:') {
+        cookieStr += '; Secure';
+      }
+
+      document.cookie = cookieStr;
     },
 
     get: function (name) {
@@ -28,7 +40,14 @@ var WebhookApp = (function ($) {
     },
 
     delete: function (name) {
-      document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
+      var cookieStr = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Strict';
+
+      // Add Secure flag if served over HTTPS
+      if (window.location.protocol === 'https:') {
+        cookieStr += '; Secure';
+      }
+
+      document.cookie = cookieStr;
     },
   };
 
@@ -88,8 +107,12 @@ var WebhookApp = (function ($) {
         $panel.addClass('registered');
 
         // Auto-collapse setup panel
-        var collapse = bootstrap.Collapse.getOrCreateInstance($('#setup-body')[0]);
-        collapse.hide();
+        if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+          var collapse = bootstrap.Collapse.getOrCreateInstance($('#setup-body')[0]);
+          collapse.hide();
+        } else {
+          logger.warn('Bootstrap not available, skipping setup panel collapse');
+        }
       } else {
         $('#register-btn').show();
         $('#unregister-btn').hide();
@@ -166,6 +189,13 @@ var WebhookApp = (function ($) {
     applyFilter: function (filter) {
       State.currentFilter = filter;
 
+      // Persist filter state to localStorage
+      try {
+        localStorage.setItem('webhookFilter', filter);
+      } catch (e) {
+        logger.warn('Failed to save filter state to localStorage:', e);
+      }
+
       // Update active state and aria-selected for accessibility
       $('.filter-btn').removeClass('active').attr('aria-selected', 'false');
       $('.filter-btn[data-filter="' + filter + '"]')
@@ -184,6 +214,31 @@ var WebhookApp = (function ($) {
   // ============================================================
 
   var Events = {
+    /**
+     * Enforces FIFO limit on events array
+     * Removes oldest events (and their DOM elements) when limit is exceeded
+     * @private
+     */
+    enforceEventLimit: function () {
+      var maxEvents = AppConfig.EVENT_STORAGE.MAX_EVENTS;
+
+      if (State.events.length > maxEvents) {
+        var eventsToRemove = State.events.length - maxEvents;
+
+        // Remove oldest events (from the end of the array)
+        for (var i = 0; i < eventsToRemove; i++) {
+          var oldEvent = State.events.pop();
+
+          // Remove DOM element from the page
+          if (oldEvent && oldEvent.el) {
+            oldEvent.el.remove();
+          }
+        }
+
+        logger.log('Enforced FIFO limit: removed ' + eventsToRemove + ' old events');
+      }
+    },
+
     getEventTypeBadge: function (eventType) {
       var badges = {
         transaction_updated: { text: 'TX Updated', class: 'text-bg-info' },
@@ -321,9 +376,15 @@ var WebhookApp = (function ($) {
       var verifyBadge = this.getVerificationBadge(verification);
 
       // Use stored timestamp if available (for restored events), otherwise generate new one
-      var timestamp = eventData.timestamp
-        ? this.formatTime(new Date(eventData.timestamp))
-        : this.formatTime(new Date());
+      var timestamp;
+      if (eventData.timestamp) {
+        timestamp = this.formatTime(new Date(eventData.timestamp));
+      } else {
+        timestamp = this.formatTime(new Date());
+        if (window.logger) {
+          logger.warn('Event received without timestamp, generating new one:', eventData);
+        }
+      }
 
       var eventId = 'event-' + Date.now();
 
@@ -428,6 +489,7 @@ var WebhookApp = (function ($) {
       copyBtn.className = 'btn-action btn-copy';
       copyBtn.setAttribute('data-event-id', eventId);
       copyBtn.setAttribute('title', 'Copy JSON');
+      copyBtn.setAttribute('aria-label', 'Copy JSON to clipboard');
       var copyIcon = document.createElement('i');
       copyIcon.className = 'bi bi-clipboard';
       copyBtn.appendChild(copyIcon);
@@ -437,6 +499,7 @@ var WebhookApp = (function ($) {
       toggleBtn.className = 'btn-action btn-toggle';
       toggleBtn.setAttribute('data-event-id', eventId);
       toggleBtn.setAttribute('title', 'Toggle details');
+      toggleBtn.setAttribute('aria-label', 'Toggle event details');
       var toggleIcon = document.createElement('i');
       toggleIcon.className = 'bi bi-code-slash';
       toggleBtn.appendChild(toggleIcon);
@@ -492,6 +555,9 @@ var WebhookApp = (function ($) {
       var $el = this.createEventElement(eventData);
       State.events.push({ el: $el, data: eventData });
 
+      // Enforce FIFO limit
+      this.enforceEventLimit();
+
       $('#webhook-events').prepend($el);
 
       // Apply current filter
@@ -543,6 +609,9 @@ var WebhookApp = (function ($) {
 
         $('#webhook-events').prepend($el);
       }
+
+      // Enforce FIFO limit after bulk restore
+      this.enforceEventLimit();
 
       UI.updateEventCounter();
 
@@ -708,6 +777,19 @@ var WebhookApp = (function ($) {
 
     // Restore events from localStorage before connecting to SSE
     Events.restoreEvents();
+
+    // Restore filter state from localStorage
+    try {
+      var savedFilter = localStorage.getItem('webhookFilter');
+      if (savedFilter && ['all', 'webhook', 'system'].indexOf(savedFilter) !== -1) {
+        UI.applyFilter(savedFilter);
+      } else {
+        UI.applyFilter('all'); // Default to 'all' if no valid saved filter
+      }
+    } catch (e) {
+      logger.warn('Failed to restore filter state from localStorage:', e);
+      UI.applyFilter('all');
+    }
 
     SSE.setup();
 

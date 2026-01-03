@@ -51,10 +51,7 @@
         state.showData();
         renderJsonWithSyntax(state.elements.data, coinsData);
       })
-      .catch(function (error) {
-        logger.error('Failed to fetch ' + type + ' coins:', error);
-        state.showError('Failed to fetch ' + type + ' coins: ' + error.message);
-      });
+      .catch(createFetchErrorHandler(type + ' coins', state));
   }
 
   /**
@@ -99,40 +96,18 @@
     outputCoinsState.hide();
 
     // Update URL
-    var url = new URL(window.location);
-    url.searchParams.set('transaction_id', transactionId);
-    window.history.pushState({}, '', url);
+    updateUrlParam('transaction_id', transactionId);
 
     // Fetch with caching and retry logic
     var fetchUrl = buildUrl(AppConfig.API.GET_TRANSACTION, { transaction_id: transactionId });
     fetchWithCache(fetchUrl, { maxRetries: 2 })
       .then(showData)
-      .catch(function (error) {
-        logger.error('Failed to fetch transaction:', error);
-        mainState.showError('Failed to fetch transaction: ' + error.message);
-      });
-  }
-
-  /**
-   * Handles form submission
-   * @param {Event} e - The submit event
-   */
-  function handleSubmit(e) {
-    e.preventDefault();
-    var transactionId = $input.value.trim();
-    if (transactionId) {
-      fetchTransaction(transactionId);
-    }
+      .catch(createFetchErrorHandler('transaction', mainState));
   }
 
   // Event listeners
-  $form.addEventListener('submit', handleSubmit);
+  $form.addEventListener('submit', createFormSubmitHandler($input, fetchTransaction));
 
   // Auto-fetch if transaction_id in URL
-  var urlParams = new URLSearchParams(window.location.search);
-  var initialTransactionId = urlParams.get('transaction_id');
-  if (initialTransactionId) {
-    $input.value = initialTransactionId;
-    fetchTransaction(initialTransactionId);
-  }
+  autoLoadFromUrl('transaction_id', $input, fetchTransaction);
 })();
