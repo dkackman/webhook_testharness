@@ -22,14 +22,6 @@ export function setSecret(secret) {
 }
 
 /**
- * Check if a secret is configured
- * @returns {boolean} True if secret is set
- */
-export function hasSecret() {
-  return webhookSecret !== null;
-}
-
-/**
  * Clear the webhook secret
  */
 export function clearSecret() {

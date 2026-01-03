@@ -25,14 +25,6 @@ class SSEManager {
   }
 
   /**
-   * Get count of active connections
-   * @returns {number} Number of active connections
-   */
-  getConnectionCount() {
-    return this.connections.size;
-  }
-
-  /**
    * Broadcast an event to all connected clients
    * @param {Object} eventData - Event data with id, event type, and data payload
    * @param {number|string} eventData.id - Event ID

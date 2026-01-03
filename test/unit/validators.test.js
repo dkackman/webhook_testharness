@@ -132,23 +132,4 @@ describe('Validators', function () {
       expect(result.valid).to.be.true;
     });
   });
-
-  describe('sanitizeInput', function () {
-    it('should escape HTML characters', function () {
-      const result = window.sanitizeInput('<script>alert("xss")</script>');
-      expect(result).to.not.include('<script>');
-      expect(result).to.include('&lt;script&gt;');
-    });
-
-    it('should escape quotes', function () {
-      const result = window.sanitizeInput('"test" and \'test\'');
-      expect(result).to.include('&quot;');
-      expect(result).to.include('&#039;');
-    });
-
-    it('should handle empty strings', function () {
-      const result = window.sanitizeInput('');
-      expect(result).to.equal('');
-    });
-  });
 });

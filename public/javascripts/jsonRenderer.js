@@ -115,5 +115,5 @@ function renderJsonWithSyntax(container, data) {
 
 // Export for use in other modules (if using modules) or make globally available
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { renderJsonWithSyntax, createColoredSpan, createFieldLink };
+  module.exports = { renderJsonWithSyntax };
 }

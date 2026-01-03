@@ -119,22 +119,6 @@ function validateLauncherIds(value) {
   return validateHexList(value, 64);
 }
 
-/**
- * Sanitizes user input to prevent XSS
- * @param {string} value - The value to sanitize
- * @returns {string} Sanitized value
- */
-function sanitizeInput(value) {
-  if (typeof value !== 'string') return '';
-
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
 // Make available globally
 if (typeof window !== 'undefined') {
   window.validateHexString = validateHexString;
@@ -143,7 +127,6 @@ if (typeof window !== 'undefined') {
   window.validateCoinIds = validateCoinIds;
   window.validateAssetIds = validateAssetIds;
   window.validateLauncherIds = validateLauncherIds;
-  window.sanitizeInput = sanitizeInput;
 }
 
 // Export for modules
@@ -155,6 +138,5 @@ if (typeof module !== 'undefined' && module.exports) {
     validateCoinIds: validateCoinIds,
     validateAssetIds: validateAssetIds,
     validateLauncherIds: validateLauncherIds,
-    sanitizeInput: sanitizeInput,
   };
 }

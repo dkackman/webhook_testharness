@@ -29,12 +29,4 @@ const config = {
   },
 };
 
-/**
- * Validates that required mTLS configuration is present
- * @returns {boolean} True if valid configuration exists
- */
-config.hasMTLSConfig = function () {
-  return (this.mtls.certPath && this.mtls.keyPath) || (this.mtls.cert && this.mtls.key);
-};
-
 export default config;

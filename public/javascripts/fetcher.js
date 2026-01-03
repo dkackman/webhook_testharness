@@ -50,7 +50,8 @@ function createFetchError(statusCode, statusText, responseBody) {
   if (responseBody && (responseBody.message || responseBody.error)) {
     message = responseBody.message || responseBody.error;
   } else {
-    message = 'Request failed with status ' + statusCode + (statusText ? ' (' + statusText + ')' : '');
+    message =
+      'Request failed with status ' + statusCode + (statusText ? ' (' + statusText + ')' : '');
   }
 
   var error = new Error(message);

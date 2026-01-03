@@ -97,7 +97,6 @@ function updateUrlParam(paramName, paramValue) {
 
 // Make available globally
 if (typeof window !== 'undefined') {
-  window.buildErrorMessage = buildErrorMessage;
   window.createFetchErrorHandler = createFetchErrorHandler;
   window.createFormSubmitHandler = createFormSubmitHandler;
   window.autoLoadFromUrl = autoLoadFromUrl;
@@ -107,7 +106,6 @@ if (typeof window !== 'undefined') {
 // Export for modules
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    buildErrorMessage: buildErrorMessage,
     createFetchErrorHandler: createFetchErrorHandler,
     createFormSubmitHandler: createFormSubmitHandler,
     autoLoadFromUrl: autoLoadFromUrl,
