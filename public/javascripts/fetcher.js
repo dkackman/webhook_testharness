@@ -39,6 +39,30 @@ function isRetryableError(error, statusCode) {
 }
 
 /**
+ * Creates a fetch error with status information
+ * @param {number} statusCode - HTTP status code
+ * @param {string} statusText - HTTP status text
+ * @param {Object} [responseBody] - Parsed response body if available
+ * @returns {Error}
+ */
+function createFetchError(statusCode, statusText, responseBody) {
+  var message;
+  if (responseBody && (responseBody.message || responseBody.error)) {
+    message = responseBody.message || responseBody.error;
+  } else {
+    message = 'Request failed with status ' + statusCode + (statusText ? ' (' + statusText + ')' : '');
+  }
+
+  var error = new Error(message);
+  error.statusCode = statusCode;
+  error.statusText = statusText;
+  if (responseBody) {
+    error.responseBody = responseBody;
+  }
+  return error;
+}
+
+/**
  * Fetches data with timeout support (fallback for browsers without AbortController)
  * @param {string} url - The URL to fetch
  * @param {number} timeout - Timeout in milliseconds
@@ -83,26 +107,12 @@ function fetchWithTimeout(url, timeout) {
         var statusText = response.statusText;
         return response
           .json()
-          .then(function (err) {
-            var error = new Error(
-              err.message || err.error || 'Request failed with status ' + statusCode
-            );
-            error.statusCode = statusCode;
-            error.statusText = statusText;
-            error.responseBody = err;
-            throw error;
+          .then(function (body) {
+            throw createFetchError(statusCode, statusText, body);
           })
           .catch(function (parseError) {
-            if (parseError.statusCode) {
-              throw parseError;
-            }
-            var error = new Error(
-              'Request failed with status ' + statusCode + ' (' + statusText + ')'
-            );
-            error.statusCode = statusCode;
-            error.statusText = statusText;
-            error.parseError = parseError.message;
-            throw error;
+            if (parseError.statusCode) throw parseError;
+            throw createFetchError(statusCode, statusText);
           });
       }
       return response.json();
@@ -123,29 +133,12 @@ function fetchWithTimeout(url, timeout) {
         var statusText = response.statusText;
         return response
           .json()
-          .then(function (err) {
-            var error = new Error(
-              err.message || err.error || 'Request failed with status ' + statusCode
-            );
-            error.statusCode = statusCode;
-            error.statusText = statusText;
-            error.responseBody = err;
-            throw error;
+          .then(function (body) {
+            throw createFetchError(statusCode, statusText, body);
           })
           .catch(function (parseError) {
-            // If this is already our formatted error, re-throw it
-            if (parseError.statusCode) {
-              throw parseError;
-            }
-
-            // JSON parsing failed - create error with all available context
-            var error = new Error(
-              'Request failed with status ' + statusCode + ' (' + statusText + ')'
-            );
-            error.statusCode = statusCode;
-            error.statusText = statusText;
-            error.parseError = parseError.message; // Preserve parse error for debugging
-            throw error;
+            if (parseError.statusCode) throw parseError;
+            throw createFetchError(statusCode, statusText);
           });
       }
       return response.json();
