@@ -20,13 +20,13 @@ block content
             button.btn.btn-primary(type="submit") Lookup
 
     //- Loading State
-    #loading.text-center.p-4(style="display: none;")
-      .spinner-border.text-primary.mb-2(role="status")
+    #loading.text-center.p-4(style="display: none;" role="status" aria-live="polite" aria-label="Loading coin details")
+      .spinner-border.text-primary.mb-2(role="status" aria-hidden="true")
         span.visually-hidden Loading...
       p.text-muted Loading coin details...
 
     //- Error State
-    #error.alert.alert-danger(style="display: none;")
+    #error.alert.alert-danger(style="display: none;" role="alert" aria-live="assertive")
       strong Error:
       span#error-message
 
@@ -36,138 +36,4 @@ block content
       .card-body.p-0
         pre#coins-data.m-0.p-3.font-monospace.small.event-details
 
-  script.
-    (function() {
-      var $form = document.getElementById('coin-form');
-      var $input = document.getElementById('coin-ids-input');
-      var $loading = document.getElementById('loading');
-      var $error = document.getElementById('error');
-      var $errorMessage = document.getElementById('error-message');
-      var $container = document.getElementById('coins-container');
-      var $data = document.getElementById('coins-data');
-
-      function showLoading() {
-        $loading.style.display = 'block';
-        $error.style.display = 'none';
-        $container.style.display = 'none';
-      }
-
-      function showError(message) {
-        $loading.style.display = 'none';
-        $error.style.display = 'block';
-        $errorMessage.textContent = message;
-        $container.style.display = 'none';
-      }
-
-      function createColoredSpan(text, className) {
-        var span = document.createElement('span');
-        span.className = className;
-        span.textContent = text;
-        return span;
-      }
-
-      function renderJsonWithSyntax(container, data) {
-        container.textContent = '';
-        var jsonStr = JSON.stringify(data, null, 2);
-        var fragment = document.createDocumentFragment();
-        var pattern = /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g;
-        var lastIndex = 0;
-        var result;
-        var lastKey = null;
-
-        while ((result = pattern.test(jsonStr), pattern.lastIndex > lastIndex || result)) {
-          if (!result) break;
-          var matchStart = pattern.lastIndex - RegExp.lastMatch.length;
-          if (matchStart > lastIndex) {
-            fragment.appendChild(document.createTextNode(jsonStr.slice(lastIndex, matchStart)));
-          }
-
-          var value = RegExp.lastMatch;
-          var cls = 'json-number';
-
-          if (/^"/.test(value)) {
-            if (/:$/.test(value)) {
-              cls = 'json-key';
-              lastKey = value.replace(/^"|":$/g, '');
-            } else {
-              cls = 'json-string';
-              if (lastKey === 'asset_hash') {
-                var hash = value.replace(/^"|"$/g, '');
-                var link = document.createElement('a');
-                link.href = '/assets?asset_ids=' + encodeURIComponent(hash);
-                link.target = '_blank';
-                link.className = cls;
-                link.textContent = value;
-                fragment.appendChild(link);
-                lastIndex = pattern.lastIndex;
-                lastKey = null;
-                continue;
-              }
-              lastKey = null;
-            }
-          } else if (/true|false/.test(value)) {
-            cls = 'json-boolean';
-            lastKey = null;
-          } else if (/null/.test(value)) {
-            cls = 'json-null';
-            lastKey = null;
-          }
-
-          fragment.appendChild(createColoredSpan(value, cls));
-          lastIndex = pattern.lastIndex;
-        }
-
-        if (lastIndex < jsonStr.length) {
-          fragment.appendChild(document.createTextNode(jsonStr.slice(lastIndex)));
-        }
-
-        container.appendChild(fragment);
-      }
-
-      function showData(data) {
-        $loading.style.display = 'none';
-        $error.style.display = 'none';
-        $container.style.display = 'block';
-        renderJsonWithSyntax($data, data);
-      }
-
-      function fetchCoins(coinIds) {
-        if (!coinIds) {
-          return;
-        }
-
-        showLoading();
-
-        var url = new URL(window.location);
-        url.searchParams.set('coin_ids', coinIds);
-        window.history.pushState({}, '', url);
-
-        fetch('/proxy/get_coins?coin_ids=' + encodeURIComponent(coinIds))
-          .then(function(response) {
-            if (!response.ok) {
-              return response.json().then(function(err) {
-                throw new Error(err.message || err.error || 'Failed to fetch coins');
-              });
-            }
-            return response.json();
-          })
-          .then(showData)
-          .catch(function(error) {
-            console.error('Error:', error);
-            showError(error.message);
-          });
-      }
-
-      $form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        var coinIds = $input.value.trim();
-        if (coinIds) {
-          fetchCoins(coinIds);
-        }
-      });
-
-      var initialCoinIds = '#{coin_ids}';
-      if (initialCoinIds) {
-        fetchCoins(initialCoinIds);
-      }
-    })();
+  script(src='/javascripts/pages/coins.js')

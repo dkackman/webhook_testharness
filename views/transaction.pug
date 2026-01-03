@@ -20,13 +20,13 @@ block content
             button.btn.btn-primary(type="submit") Lookup
 
     //- Loading State
-    #loading.text-center.p-4(style="display: none;")
-      .spinner-border.text-primary.mb-2(role="status")
+    #loading.text-center.p-4(style="display: none;" role="status" aria-live="polite" aria-label="Loading transaction details")
+      .spinner-border.text-primary.mb-2(role="status" aria-hidden="true")
         span.visually-hidden Loading...
       p.text-muted Loading transaction details...
 
     //- Error State
-    #error.alert.alert-danger(style="display: none;")
+    #error.alert.alert-danger(style="display: none;" role="alert" aria-live="assertive")
       strong Error:
       span#error-message
 
@@ -41,12 +41,12 @@ block content
       +cardHeaderSimple('Input Coins')
       .card-body.p-0
         //- Loading State
-        #input-coins-loading.text-center.p-4(style="display: none;")
-          .spinner-border.spinner-border-sm.text-primary.mb-2(role="status")
+        #input-coins-loading.text-center.p-4(style="display: none;" role="status" aria-live="polite" aria-label="Loading input coins")
+          .spinner-border.spinner-border-sm.text-primary.mb-2(role="status" aria-hidden="true")
             span.visually-hidden Loading...
           p.text-muted.small Loading input coins...
         //- Error State
-        #input-coins-error.alert.alert-danger.m-3(style="display: none;")
+        #input-coins-error.alert.alert-danger.m-3(style="display: none;" role="alert" aria-live="assertive")
           strong Error:
           span#input-coins-error-message
         //- Data
@@ -57,210 +57,15 @@ block content
       +cardHeaderSimple('Output Coins')
       .card-body.p-0
         //- Loading State
-        #output-coins-loading.text-center.p-4(style="display: none;")
-          .spinner-border.spinner-border-sm.text-primary.mb-2(role="status")
+        #output-coins-loading.text-center.p-4(style="display: none;" role="status" aria-live="polite" aria-label="Loading output coins")
+          .spinner-border.spinner-border-sm.text-primary.mb-2(role="status" aria-hidden="true")
             span.visually-hidden Loading...
           p.text-muted.small Loading output coins...
         //- Error State
-        #output-coins-error.alert.alert-danger.m-3(style="display: none;")
+        #output-coins-error.alert.alert-danger.m-3(style="display: none;" role="alert" aria-live="assertive")
           strong Error:
           span#output-coins-error-message
         //- Data
         pre#output-coins-data.m-0.p-3.font-monospace.small.event-details
 
-  script.
-    (function() {
-      var $form = document.getElementById('transaction-form');
-      var $input = document.getElementById('transaction-id-input');
-      var $loading = document.getElementById('loading');
-      var $error = document.getElementById('error');
-      var $errorMessage = document.getElementById('error-message');
-      var $container = document.getElementById('transaction-container');
-      var $data = document.getElementById('transaction-data');
-
-      var $inputCoinsContainer = document.getElementById('input-coins-container');
-      var $inputCoinsLoading = document.getElementById('input-coins-loading');
-      var $inputCoinsError = document.getElementById('input-coins-error');
-      var $inputCoinsErrorMessage = document.getElementById('input-coins-error-message');
-      var $inputCoinsData = document.getElementById('input-coins-data');
-
-      var $outputCoinsContainer = document.getElementById('output-coins-container');
-      var $outputCoinsLoading = document.getElementById('output-coins-loading');
-      var $outputCoinsError = document.getElementById('output-coins-error');
-      var $outputCoinsErrorMessage = document.getElementById('output-coins-error-message');
-      var $outputCoinsData = document.getElementById('output-coins-data');
-
-      function showLoading() {
-        $loading.style.display = 'block';
-        $error.style.display = 'none';
-        $container.style.display = 'none';
-      }
-
-      function showError(message) {
-        $loading.style.display = 'none';
-        $error.style.display = 'block';
-        $errorMessage.textContent = message;
-        $container.style.display = 'none';
-      }
-
-      function createColoredSpan(text, className) {
-        var span = document.createElement('span');
-        span.className = className;
-        span.textContent = text;
-        return span;
-      }
-
-      function renderJsonWithSyntax(container, data) {
-        container.textContent = '';
-        var jsonStr = JSON.stringify(data, null, 2);
-        var fragment = document.createDocumentFragment();
-        var pattern = /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g;
-        var lastIndex = 0;
-        var result;
-        var lastKey = null;
-
-        while ((result = pattern.test(jsonStr), pattern.lastIndex > lastIndex || result)) {
-          if (!result) break;
-          var matchStart = pattern.lastIndex - RegExp.lastMatch.length;
-          if (matchStart > lastIndex) {
-            fragment.appendChild(document.createTextNode(jsonStr.slice(lastIndex, matchStart)));
-          }
-
-          var value = RegExp.lastMatch;
-          var cls = 'json-number';
-
-          if (/^"/.test(value)) {
-            if (/:$/.test(value)) {
-              cls = 'json-key';
-              lastKey = value.replace(/^"|":$/g, '');
-            } else {
-              cls = 'json-string';
-              if (lastKey === 'asset_hash') {
-                var hash = value.replace(/^"|"$/g, '');
-                var link = document.createElement('a');
-                link.href = '/assets?asset_ids=' + encodeURIComponent(hash);
-                link.target = '_blank';
-                link.className = cls;
-                link.textContent = value;
-                fragment.appendChild(link);
-                lastIndex = pattern.lastIndex;
-                lastKey = null;
-                continue;
-              }
-              lastKey = null;
-            }
-          } else if (/true|false/.test(value)) {
-            cls = 'json-boolean';
-            lastKey = null;
-          } else if (/null/.test(value)) {
-            cls = 'json-null';
-            lastKey = null;
-          }
-
-          fragment.appendChild(createColoredSpan(value, cls));
-          lastIndex = pattern.lastIndex;
-        }
-
-        if (lastIndex < jsonStr.length) {
-          fragment.appendChild(document.createTextNode(jsonStr.slice(lastIndex)));
-        }
-
-        container.appendChild(fragment);
-      }
-
-      function showData(data) {
-        $loading.style.display = 'none';
-        $error.style.display = 'none';
-        $container.style.display = 'block';
-        renderJsonWithSyntax($data, data);
-
-        // Extract coin IDs and fetch coins asynchronously
-        if (data.transaction) {
-          if (data.transaction.input_coin_ids && data.transaction.input_coin_ids.length > 0) {
-            fetchCoins(data.transaction.input_coin_ids, 'input');
-          }
-          if (data.transaction.output_coin_ids && data.transaction.output_coin_ids.length > 0) {
-            fetchCoins(data.transaction.output_coin_ids, 'output');
-          }
-        }
-      }
-
-      function fetchCoins(coinIds, type) {
-        var isInput = type === 'input';
-        var $coinsContainer = isInput ? $inputCoinsContainer : $outputCoinsContainer;
-        var $coinsLoading = isInput ? $inputCoinsLoading : $outputCoinsLoading;
-        var $coinsError = isInput ? $inputCoinsError : $outputCoinsError;
-        var $coinsErrorMessage = isInput ? $inputCoinsErrorMessage : $outputCoinsErrorMessage;
-        var $coinsData = isInput ? $inputCoinsData : $outputCoinsData;
-
-        // Show container and loading state
-        $coinsContainer.style.display = 'block';
-        $coinsLoading.style.display = 'block';
-        $coinsError.style.display = 'none';
-        $coinsData.style.display = 'none';
-
-        var coinIdsParam = coinIds.join(',');
-        fetch('/proxy/get_coins?coin_ids=' + encodeURIComponent(coinIdsParam))
-          .then(function(response) {
-            if (!response.ok) {
-              return response.json().then(function(err) {
-                throw new Error(err.message || err.error || 'Failed to fetch coins');
-              });
-            }
-            return response.json();
-          })
-          .then(function(coinsData) {
-            $coinsLoading.style.display = 'none';
-            $coinsError.style.display = 'none';
-            $coinsData.style.display = 'block';
-            renderJsonWithSyntax($coinsData, coinsData);
-          })
-          .catch(function(error) {
-            console.error('Error fetching ' + type + ' coins:', error);
-            $coinsLoading.style.display = 'none';
-            $coinsError.style.display = 'block';
-            $coinsErrorMessage.textContent = error.message;
-            $coinsData.style.display = 'none';
-          });
-      }
-
-      function fetchTransaction(transactionId) {
-        if (!transactionId) {
-          return;
-        }
-
-        showLoading();
-
-        var url = new URL(window.location);
-        url.searchParams.set('transaction_id', transactionId);
-        window.history.pushState({}, '', url);
-
-        fetch('/proxy/get_transaction?transaction_id=' + encodeURIComponent(transactionId))
-          .then(function(response) {
-            if (!response.ok) {
-              return response.json().then(function(err) {
-                throw new Error(err.message || err.error || 'Failed to fetch transaction');
-              });
-            }
-            return response.json();
-          })
-          .then(showData)
-          .catch(function(error) {
-            console.error('Error:', error);
-            showError(error.message);
-          });
-      }
-
-      $form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        var transactionId = $input.value.trim();
-        if (transactionId) {
-          fetchTransaction(transactionId);
-        }
-      });
-
-      var initialTransactionId = '#{transaction_id}';
-      if (initialTransactionId) {
-        fetchTransaction(initialTransactionId);
-      }
-    })();
+  script(src='/javascripts/pages/transaction.js')
