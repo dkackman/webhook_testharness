@@ -5,14 +5,15 @@
 
 import https from 'node:https';
 import fs from 'node:fs';
+import { Agent } from 'undici';
 import config from '../config/index.js';
 
 /**
- * Creates an HTTPS agent configured with mTLS certificates
- * @returns {https.Agent} Configured HTTPS agent
+ * Gets mTLS certificate data
+ * @returns {Object} Certificate data with cert and key properties
  * @throws {Error} If certificate configuration is missing or invalid
  */
-export function createMTLSAgent() {
+function getCertificateData() {
   const { certPath, keyPath, cert, key } = config.mtls;
 
   let certData, keyData;
@@ -33,18 +34,39 @@ export function createMTLSAgent() {
     );
   }
 
+  return { cert: certData, key: keyData };
+}
+
+/**
+ * Creates an HTTPS agent configured with mTLS certificates
+ * @returns {https.Agent} Configured HTTPS agent
+ * @throws {Error} If certificate configuration is missing or invalid
+ */
+export function createMTLSAgent() {
+  const { cert, key } = getCertificateData();
+
   return new https.Agent({
-    cert: certData,
-    key: keyData,
+    cert,
+    key,
     rejectUnauthorized: false, // Set to true to verify server certificate
   });
 }
+
+// Create undici Agent with mTLS configuration for fetch()
+const { cert, key } = getCertificateData();
+const fetchAgent = new Agent({
+  connect: {
+    cert,
+    key,
+    rejectUnauthorized: false,
+  },
+});
 
 // Default request timeout in milliseconds
 const REQUEST_TIMEOUT_MS = 30000;
 
 /**
- * Makes an HTTPS request to the Sage API
+ * Makes an HTTPS request to the Sage API using native fetch with undici dispatcher
  * @param {Object} options - Request options
  * @param {string} options.path - API endpoint path
  * @param {string} [options.method='POST'] - HTTP method
@@ -52,58 +74,50 @@ const REQUEST_TIMEOUT_MS = 30000;
  * @param {number} [options.timeout] - Request timeout in milliseconds
  * @returns {Promise<Object>} Parsed JSON response
  */
-function makeRequest({ path, method = 'POST', body = null, timeout = REQUEST_TIMEOUT_MS }) {
-  return new Promise((resolve, reject) => {
-    const agent = createMTLSAgent();
-    const postData = body ? JSON.stringify(body) : '';
+async function makeRequest({ path, method = 'POST', body = null, timeout = REQUEST_TIMEOUT_MS }) {
+  const url = `https://${config.sageApi.hostname}:${config.sageApi.port}${path}`;
 
-    const options = {
-      hostname: config.sageApi.hostname,
-      port: config.sageApi.port,
-      path,
+  // Create AbortController for timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(url, {
       method,
-      agent,
+      body: body ? JSON.stringify(body) : null,
       headers: {
         'Content-Type': 'application/json',
-        ...(postData && { 'Content-Length': Buffer.byteLength(postData) }),
       },
+      dispatcher: fetchAgent, // undici agent with mTLS
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    // Parse response body
+    const data = await response.json();
+
+    // Return both status code and data for consistency with original
+    return {
+      statusCode: response.status,
+      data,
     };
+  } catch (error) {
+    clearTimeout(timeoutId);
 
-    const req = https.request(options, (res) => {
-      let data = '';
-
-      res.on('data', (chunk) => {
-        data += chunk;
-      });
-
-      res.on('end', () => {
-        try {
-          const jsonData = JSON.parse(data);
-          resolve({
-            statusCode: res.statusCode,
-            data: jsonData,
-          });
-        } catch {
-          reject(new Error(`Failed to parse response: ${data}`));
-        }
-      });
-    });
-
-    // Add timeout handling
-    req.setTimeout(timeout, () => {
-      req.destroy();
-      reject(new Error(`Request to ${path} timed out after ${timeout}ms`));
-    });
-
-    req.on('error', (err) => {
-      reject(err);
-    });
-
-    if (postData) {
-      req.write(postData);
+    // Handle timeout
+    if (error.name === 'AbortError') {
+      throw new Error(`Request to ${path} timed out after ${timeout}ms`);
     }
-    req.end();
-  });
+
+    // Handle JSON parse errors
+    if (error instanceof SyntaxError) {
+      throw new Error(`Failed to parse response from ${path}: ${error.message}`);
+    }
+
+    // Re-throw other errors
+    throw error;
+  }
 }
 
 /**

@@ -14,7 +14,7 @@ const router = Router();
  * POST /sage_hook
  * Receives webhook events, verifies signature, and broadcasts to SSE clients
  */
-router.post('/', express.raw({ type: 'application/json' }), (req, res, next) => {
+router.post('/', express.raw({ type: 'application/json', limit: '2mb' }), (req, res, next) => {
   try {
     const signature = req.headers['x-webhook-signature'];
 
