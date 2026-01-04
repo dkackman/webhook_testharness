@@ -48,7 +48,7 @@ export function createMTLSAgent() {
   return new https.Agent({
     cert,
     key,
-    rejectUnauthorized: false, // Set to true to verify server certificate
+    rejectUnauthorized: config.sageApi.verifyCert,
   });
 }
 
@@ -58,7 +58,7 @@ const fetchAgent = new Agent({
   connect: {
     cert,
     key,
-    rejectUnauthorized: false,
+    rejectUnauthorized: config.sageApi.verifyCert,
   },
 });
 

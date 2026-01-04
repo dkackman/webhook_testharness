@@ -21,6 +21,7 @@ const config = {
   sageApi: {
     hostname: process.env.SAGE_API_HOST || 'localhost',
     port: parseInt(process.env.SAGE_API_PORT, 10) || 9257,
+    verifyCert: process.env.VERIFY_SERVER_CERT === 'true',
   },
 
   // Webhook configuration
