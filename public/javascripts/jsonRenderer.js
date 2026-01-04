@@ -1,116 +1,68 @@
 /**
- * JSON rendering utilities with syntax highlighting and smart linking
+ * JSON rendering utilities using highlight.js with smart linking
  */
 
 /**
- * Creates a colored span element for JSON syntax highlighting
- * @param {string} text - The text content
- * @param {string} className - CSS class name for styling
- * @returns {HTMLSpanElement}
+ * Link configurations for specific JSON fields
  */
-function createColoredSpan(text, className) {
-  var span = document.createElement('span');
-  span.className = className;
-  span.textContent = text;
-  return span;
+var jsonLinkConfigs = {
+  asset_hash: { route: '/assets', param: 'asset_ids' },
+  launcher_id: { route: '/nfts', param: 'launcher_ids' },
+};
+
+/**
+ * Post-processes highlighted JSON HTML to add links for specific fields
+ * @param {string} html - The highlighted HTML from highlight.js
+ * @returns {string} - HTML with links added for configured fields
+ */
+function addLinksToHighlightedJson(html) {
+  // Pattern to match key-value pairs where key is a linkable field
+  // highlight.js outputs: <span class="hljs-attr">&quot;key&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;value&quot;</span>
+  var linkableKeys = Object.keys(jsonLinkConfigs).join('|');
+  var pattern = new RegExp(
+    '<span class="hljs-attr">&quot;(' +
+      linkableKeys +
+      ')&quot;</span><span class="hljs-punctuation">:</span>\\s*<span class="hljs-string">&quot;([^&]+)&quot;</span>',
+    'g'
+  );
+
+  return html.replace(pattern, function (match, key, value) {
+    var config = jsonLinkConfigs[key];
+    var href = config.route + '?' + config.param + '=' + encodeURIComponent(value);
+    return (
+      '<span class="hljs-attr">&quot;' +
+      key +
+      '&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;<a href="' +
+      href +
+      '">' +
+      value +
+      '</a>&quot;</span>'
+    );
+  });
 }
 
 /**
- * Creates a link element for specific JSON fields
- * @param {string} key - The JSON key name
- * @param {string} value - The value (with quotes)
- * @param {string} className - CSS class for the link
- * @returns {HTMLAnchorElement|null}
- */
-function createFieldLink(key, value, className) {
-  var linkConfigs = {
-    asset_hash: { route: '/assets', param: 'asset_ids' },
-    launcher_id: { route: '/nfts', param: 'launcher_ids' },
-    // Add more linkable fields here as needed
-    // 'coin_id': { route: '/coins', param: 'coin_ids' }
-  };
-
-  var config = linkConfigs[key];
-  if (!config) return null;
-
-  var cleanValue = value.replace(/^"|"$/g, '');
-  var link = document.createElement('a');
-  link.href = config.route + '?' + config.param + '=' + encodeURIComponent(cleanValue);
-  link.className = className;
-  link.textContent = value;
-  return link;
-}
-
-/**
- * Renders JSON with syntax highlighting and smart links
+ * Renders JSON with syntax highlighting and smart links using highlight.js
  * @param {HTMLElement} container - The container element to render into
  * @param {Object} data - The data to render as JSON
  */
 function renderJsonWithSyntax(container, data) {
-  container.textContent = '';
   var jsonStr = JSON.stringify(data, null, 2);
-  var fragment = document.createDocumentFragment();
-  var pattern =
-    /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g;
-  var lastIndex = 0;
-  var lastKey = null;
-  var match;
 
-  // Iterate through regex matches
-  pattern.lastIndex = 0;
-  while ((match = pattern.exec(jsonStr)) !== null) {
-    var matchStart = match.index;
+  // Use highlight.js to highlight the JSON
+  var highlighted = hljs.highlight(jsonStr, { language: 'json' });
 
-    // Add any text between matches
-    if (matchStart > lastIndex) {
-      fragment.appendChild(document.createTextNode(jsonStr.slice(lastIndex, matchStart)));
-    }
+  // Add links for specific fields
+  var htmlWithLinks = addLinksToHighlightedJson(highlighted.value);
 
-    var value = match[0];
-    var cls = 'json-number';
+  // Sanitize with DOMPurify before inserting into the DOM
+  // Allow anchor tags and highlight.js span classes
+  var sanitized = DOMPurify.sanitize(htmlWithLinks, {
+    ALLOWED_TAGS: ['span', 'a'],
+    ALLOWED_ATTR: ['class', 'href'],
+  });
 
-    if (/^"/.test(value)) {
-      if (/:$/.test(value)) {
-        // This is a key
-        cls = 'json-key';
-        lastKey = value.replace(/^"|":$/g, '');
-      } else {
-        // This is a string value
-        cls = 'json-string';
-
-        // Check if this value should be a link
-        if (lastKey) {
-          var link = createFieldLink(lastKey, value, cls);
-          if (link) {
-            fragment.appendChild(link);
-            lastIndex = pattern.lastIndex;
-            lastKey = null;
-            continue;
-          }
-        }
-        lastKey = null;
-      }
-    } else if (/true|false/.test(value)) {
-      cls = 'json-boolean';
-      lastKey = null;
-    } else if (/null/.test(value)) {
-      cls = 'json-null';
-      lastKey = null;
-    } else {
-      // number
-      lastKey = null;
-    }
-
-    fragment.appendChild(createColoredSpan(value, cls));
-    lastIndex = pattern.lastIndex;
-  }
-
-  // Add any remaining text
-  if (lastIndex < jsonStr.length) {
-    fragment.appendChild(document.createTextNode(jsonStr.slice(lastIndex)));
-  }
-
-  container.appendChild(fragment);
+  container.innerHTML = sanitized;
 }
 
 // Export for use in other modules (if using modules) or make globally available

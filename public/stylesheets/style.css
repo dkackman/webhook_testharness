@@ -112,21 +112,11 @@ body {
   border: 1px solid #333;
 }
 
-/* JSON Syntax Colors - High contrast for dark background */
-.json-key {
-  color: #7dd3fc; /* Sky blue - keys */
-}
-.json-string {
-  color: #86efac; /* Green - strings */
-}
-.json-number {
-  color: #fcd34d; /* Amber - numbers */
-}
-.json-boolean {
-  color: #c4b5fd; /* Purple - booleans */
-}
-.json-null {
-  color: #f87171; /* Red - null */
+/* JSON links within highlighted code */
+.event-details .hljs-string a,
+pre .hljs-string a {
+  text-decoration: underline;
+  color: inherit;
 }
 
 /* System Event */

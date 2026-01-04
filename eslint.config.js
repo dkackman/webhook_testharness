@@ -34,6 +34,9 @@ export default [
         ...globals.jquery,
         WebhookApp: 'writable',
         bootstrap: 'readonly',
+        // CDN libraries (loaded via layout.pug script tags)
+        hljs: 'readonly',
+        DOMPurify: 'readonly',
         // Global utilities (loaded via layout.pug script tags)
         AppConfig: 'readonly',
         logger: 'readonly',
