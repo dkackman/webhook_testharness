@@ -642,12 +642,13 @@ var WebhookApp = (function ($) {
     syncSecret: function () {
       if (!State.webhookSecret) return Promise.resolve();
 
-      return fetch('/sync_secret', {
+      return fetchWithRetry('/sync_secret', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret: State.webhookSecret }),
+        body: { secret: State.webhookSecret },
+        maxRetries: 2,
       }).catch(function (err) {
-        console.error('Failed to sync secret:', err);
+        logger.error('Failed to sync secret:', err);
+        Events.addSystemEvent('Failed to sync HMAC secret: ' + err.message, 'warning');
       });
     },
 
@@ -673,14 +674,11 @@ var WebhookApp = (function ($) {
         requestBody.secret = State.webhookSecret;
       }
 
-      fetch('/proxy/register_webhook', {
+      fetchWithRetry('/proxy/register_webhook', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
+        body: requestBody,
+        maxRetries: 2,
       })
-        .then(function (response) {
-          return response.json();
-        })
         .then(function (data) {
           if (data.proxy_status === 'success' && data.webhook_id) {
             State.webhookId = data.webhook_id;
@@ -705,14 +703,11 @@ var WebhookApp = (function ($) {
 
       $('#response-status').text('Unregistering...');
 
-      fetch('/proxy/unregister_webhook', {
+      fetchWithRetry('/proxy/unregister_webhook', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ webhook_id: State.webhookId }),
+        body: { webhook_id: State.webhookId },
+        maxRetries: 2,
       })
-        .then(function (response) {
-          return response.json();
-        })
         .then(function () {
           State.webhookId = null;
           State.webhookSecret = null;

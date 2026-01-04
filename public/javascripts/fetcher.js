@@ -66,16 +66,33 @@ function createFetchError(statusCode, statusText, responseBody) {
 /**
  * Fetches data with timeout support (fallback for browsers without AbortController)
  * @param {string} url - The URL to fetch
- * @param {number} timeout - Timeout in milliseconds
+ * @param {Object} options - Fetch options
+ * @param {number} options.timeout - Timeout in milliseconds
+ * @param {string} [options.method] - HTTP method
+ * @param {Object} [options.body] - Request body (will be JSON stringified)
+ * @param {Object} [options.headers] - Request headers
  * @returns {Promise<any>} The JSON response
  */
-function fetchWithTimeoutFallback(url, timeout) {
+function fetchWithTimeoutFallback(url, options) {
+  var timeout = options.timeout;
+  var fetchOptions = {};
+
+  if (options.method) {
+    fetchOptions.method = options.method;
+  }
+  if (options.body) {
+    fetchOptions.body = JSON.stringify(options.body);
+    fetchOptions.headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers);
+  } else if (options.headers) {
+    fetchOptions.headers = options.headers;
+  }
+
   return new Promise(function (resolve, reject) {
     var timeoutId = setTimeout(function () {
       reject(new Error('Request timed out'));
     }, timeout);
 
-    fetch(url)
+    fetch(url, fetchOptions)
       .then(function (response) {
         clearTimeout(timeoutId);
         resolve(response);
@@ -90,11 +107,28 @@ function fetchWithTimeoutFallback(url, timeout) {
 /**
  * Fetches data with timeout support
  * @param {string} url - The URL to fetch
- * @param {number} timeout - Timeout in milliseconds (default: 10000)
+ * @param {Object} [options] - Options object
+ * @param {number} [options.timeout] - Timeout in milliseconds (default: 10000)
+ * @param {string} [options.method] - HTTP method (default: GET)
+ * @param {Object} [options.body] - Request body (will be JSON stringified)
+ * @param {Object} [options.headers] - Additional headers
  * @returns {Promise<any>} The JSON response
  */
-function fetchWithTimeout(url, timeout) {
-  timeout = timeout || (window.AppConfig && window.AppConfig.TIMEOUTS.FETCH) || 10000;
+function fetchWithTimeout(url, options) {
+  options = options || {};
+  var timeout = options.timeout || (window.AppConfig && window.AppConfig.TIMEOUTS.FETCH) || 10000;
+
+  // Build fetch options
+  var fetchOptions = {};
+  if (options.method) {
+    fetchOptions.method = options.method;
+  }
+  if (options.body) {
+    fetchOptions.body = JSON.stringify(options.body);
+    fetchOptions.headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers);
+  } else if (options.headers) {
+    fetchOptions.headers = options.headers;
+  }
 
   // Check for AbortController support
   if (typeof AbortController === 'undefined') {
@@ -102,22 +136,24 @@ function fetchWithTimeout(url, timeout) {
       window.logger.warn('AbortController not supported, using timeout fallback');
     }
 
-    return fetchWithTimeoutFallback(url, timeout).then(function (response) {
-      if (!response.ok) {
-        var statusCode = response.status;
-        var statusText = response.statusText;
-        return response
-          .json()
-          .then(function (body) {
-            throw createFetchError(statusCode, statusText, body);
-          })
-          .catch(function (parseError) {
-            if (parseError.statusCode) throw parseError;
-            throw createFetchError(statusCode, statusText);
-          });
+    return fetchWithTimeoutFallback(url, Object.assign({ timeout: timeout }, options)).then(
+      function (response) {
+        if (!response.ok) {
+          var statusCode = response.status;
+          var statusText = response.statusText;
+          return response
+            .json()
+            .then(function (body) {
+              throw createFetchError(statusCode, statusText, body);
+            })
+            .catch(function (parseError) {
+              if (parseError.statusCode) throw parseError;
+              throw createFetchError(statusCode, statusText);
+            });
+        }
+        return response.json();
       }
-      return response.json();
-    });
+    );
   }
 
   // Use AbortController for modern browsers
@@ -126,7 +162,9 @@ function fetchWithTimeout(url, timeout) {
     controller.abort();
   }, timeout);
 
-  return fetch(url, { signal: controller.signal })
+  fetchOptions.signal = controller.signal;
+
+  return fetch(url, fetchOptions)
     .then(function (response) {
       clearTimeout(timeoutId);
       if (!response.ok) {
@@ -164,16 +202,18 @@ function fetchWithTimeout(url, timeout) {
  * @param {number} [options.timeout] - Timeout in milliseconds (default: 10000)
  * @param {number} [options.maxRetries] - Maximum number of retries (default: 3)
  * @param {number} [options.initialDelay] - Initial retry delay in ms (default: 1000)
+ * @param {string} [options.method] - HTTP method (default: GET)
+ * @param {Object} [options.body] - Request body (will be JSON stringified)
+ * @param {Object} [options.headers] - Additional headers
  * @returns {Promise<any>} The JSON response
  */
 function fetchWithRetry(url, options) {
   options = options || {};
   var maxRetries = options.maxRetries !== undefined ? options.maxRetries : 3;
   var initialDelay = options.initialDelay || 1000;
-  var timeout = options.timeout;
 
   function attempt(retryCount) {
-    return fetchWithTimeout(url, timeout).catch(function (error) {
+    return fetchWithTimeout(url, options).catch(function (error) {
       var shouldRetry = isRetryableError(error, error.statusCode);
 
       if (shouldRetry && retryCount < maxRetries) {
@@ -229,6 +269,9 @@ function evictOldCacheEntries() {
  * @param {number} [options.timeout] - Timeout in milliseconds
  * @param {number} [options.maxRetries] - Maximum number of retries
  * @param {number} [options.initialDelay] - Initial retry delay in ms
+ * @param {string} [options.method] - HTTP method (default: GET)
+ * @param {Object} [options.body] - Request body (will be JSON stringified)
+ * @param {Object} [options.headers] - Additional headers
  * @param {boolean} [options.skipCache] - Skip cache and force fresh fetch
  * @param {number} [options.cacheTTL] - Custom cache TTL in ms (default: 5 minutes)
  * @returns {Promise<any>} The JSON response
