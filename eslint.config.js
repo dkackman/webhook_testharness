@@ -82,6 +82,12 @@ export default [
         ...globals.mocha,
       },
     },
+    rules: {
+      'no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
+    },
   },
   {
     ignores: ['node_modules/**'],
