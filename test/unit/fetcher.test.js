@@ -14,7 +14,7 @@ const __dirname = dirname(__filename);
 
 describe('Fetcher', function () {
   let window, fetchStub, originalFetch;
-  let fetchWithTimeout, fetchWithRetry, fetchWithCache, buildUrl, clearCache;
+  let fetchWithTimeout, fetchWithRetry, buildUrl;
 
   beforeEach(function () {
     // Set up DOM with AbortController
@@ -29,7 +29,6 @@ describe('Fetcher', function () {
     // Mock AppConfig
     window.AppConfig = {
       TIMEOUTS: { FETCH: 5000 },
-      CACHE: { TTL: 60000, MAX_SIZE: 50 },
       ERRORS: { FETCH_TIMEOUT: 'Request timed out' },
     };
     global.AppConfig = window.AppConfig;
@@ -55,15 +54,12 @@ describe('Fetcher', function () {
     // Get exported functions
     fetchWithTimeout = window.fetchWithTimeout;
     fetchWithRetry = window.fetchWithRetry;
-    fetchWithCache = window.fetchWithCache;
     buildUrl = window.buildUrl;
-    clearCache = window.clearCache;
   });
 
   afterEach(function () {
     global.fetch = originalFetch;
     sinon.restore();
-    if (clearCache) clearCache();
   });
 
   describe('buildUrl', function () {
@@ -281,75 +277,6 @@ describe('Fetcher', function () {
       const options = fetchStub.firstCall.args[1];
       expect(options.method).to.equal('POST');
       expect(options.body).to.equal('{"test":true}');
-    });
-  });
-
-  describe('fetchWithCache', function () {
-    it('should cache successful responses', async function () {
-      const mockResponse = {
-        ok: true,
-        json: sinon.stub().resolves({ cached: true }),
-      };
-      fetchStub.resolves(mockResponse);
-
-      // First call - should fetch
-      await fetchWithCache('/api/test');
-      expect(fetchStub.calledOnce).to.be.true;
-
-      // Second call - should use cache
-      const result = await fetchWithCache('/api/test');
-      expect(result).to.deep.equal({ cached: true });
-      expect(fetchStub.calledOnce).to.be.true; // Still only one fetch call
-    });
-
-    it('should skip cache when skipCache is true', async function () {
-      const mockResponse = {
-        ok: true,
-        json: sinon.stub().resolves({ fresh: true }),
-      };
-      fetchStub.resolves(mockResponse);
-
-      // First call
-      await fetchWithCache('/api/test');
-
-      // Second call with skipCache
-      await fetchWithCache('/api/test', { skipCache: true });
-
-      expect(fetchStub.calledTwice).to.be.true;
-    });
-
-    it('should use different cache entries for different URLs', async function () {
-      const mockResponse1 = {
-        ok: true,
-        json: sinon.stub().resolves({ url: 1 }),
-      };
-      const mockResponse2 = {
-        ok: true,
-        json: sinon.stub().resolves({ url: 2 }),
-      };
-      fetchStub.onCall(0).resolves(mockResponse1);
-      fetchStub.onCall(1).resolves(mockResponse2);
-
-      const result1 = await fetchWithCache('/api/test1');
-      const result2 = await fetchWithCache('/api/test2');
-
-      expect(result1).to.deep.equal({ url: 1 });
-      expect(result2).to.deep.equal({ url: 2 });
-      expect(fetchStub.calledTwice).to.be.true;
-    });
-
-    it('should clear cache', async function () {
-      const mockResponse = {
-        ok: true,
-        json: sinon.stub().resolves({ data: 'test' }),
-      };
-      fetchStub.resolves(mockResponse);
-
-      await fetchWithCache('/api/test');
-      clearCache();
-      await fetchWithCache('/api/test');
-
-      expect(fetchStub.calledTwice).to.be.true;
     });
   });
 });

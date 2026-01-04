@@ -101,8 +101,8 @@ function createPageModule(config) {
     params[config.urlParamName] = ids;
     var fetchUrl = buildUrl(config.apiEndpoint, params);
 
-    // Fetch with caching and retry logic
-    fetchWithCache(fetchUrl, { maxRetries: 2 })
+    // Fetch with retry logic
+    fetchWithRetry(fetchUrl, { maxRetries: 2 })
       .then(showData)
       .catch(createFetchErrorHandler(config.entityType, mainState));
   }

@@ -46,7 +46,6 @@ export default [
         renderJsonWithSyntax: 'readonly',
         buildUrl: 'readonly',
         fetchWithRetry: 'readonly',
-        fetchWithCache: 'readonly',
         validateTransactionId: 'readonly',
         validateCoinIds: 'readonly',
         validateAssetIds: 'readonly',

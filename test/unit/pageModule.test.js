@@ -68,7 +68,7 @@ describe('PageModule', function () {
     new window.Function(fetcherCode).call(window);
     // Make fetcher functions available globally for pageModule
     global.buildUrl = window.buildUrl;
-    global.fetchWithCache = window.fetchWithCache;
+    global.fetchWithRetry = window.fetchWithRetry;
 
     // Load pageModule
     const pageModulePath = join(__dirname, '../../public/javascripts/pageModule.js');

@@ -46,7 +46,7 @@
     var coinIdsParam = coinIds.join(',');
     var fetchUrl = buildUrl(AppConfig.API.GET_COINS, { coin_ids: coinIdsParam });
 
-    fetchWithCache(fetchUrl, { maxRetries: 2 })
+    fetchWithRetry(fetchUrl, { maxRetries: 2 })
       .then(function (coinsData) {
         state.showData();
         renderJsonWithSyntax(state.elements.data, coinsData);
@@ -98,9 +98,9 @@
     // Update URL
     updateUrlParam('transaction_id', transactionId);
 
-    // Fetch with caching and retry logic
+    // Fetch with retry logic
     var fetchUrl = buildUrl(AppConfig.API.GET_TRANSACTION, { transaction_id: transactionId });
-    fetchWithCache(fetchUrl, { maxRetries: 2 })
+    fetchWithRetry(fetchUrl, { maxRetries: 2 })
       .then(showData)
       .catch(createFetchErrorHandler('transaction', mainState));
   }

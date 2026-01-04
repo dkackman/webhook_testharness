@@ -23,12 +23,6 @@ var AppConfig = {
     SESSION_KEY: 'sse_session_active',
   },
 
-  // Cache configuration
-  CACHE: {
-    TTL: 5 * 60 * 1000, // 5 minutes
-    MAX_SIZE: 50, // Maximum number of cached entries
-  },
-
   // API endpoints
   API: {
     GET_COINS: '/proxy/get_coins',

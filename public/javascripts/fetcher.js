@@ -1,9 +1,6 @@
 /**
- * Enhanced fetch utilities with timeout, retry logic, caching, and better error handling
+ * Enhanced fetch utilities with timeout, retry logic, and better error handling
  */
-
-// Cache for API responses
-var cache = new Map();
 
 /**
  * Sleeps for a specified duration
@@ -245,121 +242,6 @@ function fetchWithRetry(url, options) {
 }
 
 /**
- * Evicts old cache entries if cache size exceeds MAX_CACHE_SIZE
- */
-function evictOldCacheEntries() {
-  if (cache.size <= AppConfig.CACHE.MAX_SIZE) return;
-
-  // Convert to array, sort by timestamp (oldest first), and remove oldest entries
-  var entries = Array.from(cache.entries());
-  entries.sort(function (a, b) {
-    return a[1].timestamp - b[1].timestamp;
-  });
-
-  var entriesToRemove = cache.size - AppConfig.CACHE.MAX_SIZE;
-  for (var i = 0; i < entriesToRemove; i++) {
-    cache.delete(entries[i][0]);
-  }
-}
-
-/**
- * Fetches data with caching support
- * @param {string} url - The URL to fetch
- * @param {Object} [options] - Options object
- * @param {number} [options.timeout] - Timeout in milliseconds
- * @param {number} [options.maxRetries] - Maximum number of retries
- * @param {number} [options.initialDelay] - Initial retry delay in ms
- * @param {string} [options.method] - HTTP method (default: GET)
- * @param {Object} [options.body] - Request body (will be JSON stringified)
- * @param {Object} [options.headers] - Additional headers
- * @param {boolean} [options.skipCache] - Skip cache and force fresh fetch
- * @param {number} [options.cacheTTL] - Custom cache TTL in ms (default: 5 minutes)
- * @returns {Promise<any>} The JSON response
- */
-function fetchWithCache(url, options) {
-  options = options || {};
-  var cacheTTL = options.cacheTTL !== undefined ? options.cacheTTL : AppConfig.CACHE.TTL;
-  var skipCache = options.skipCache || false;
-
-  // Check cache first (unless skipCache is true)
-  if (!skipCache) {
-    var cached = cache.get(url);
-    var now = Date.now();
-
-    if (cached && now - cached.timestamp < cacheTTL) {
-      if (window.logger) {
-        window.logger.log('Using cached data for:', url);
-      }
-      return Promise.resolve(cached.data);
-    }
-  }
-
-  // Fetch fresh data
-  return fetchWithRetry(url, options).then(function (data) {
-    // Store in cache
-    cache.set(url, {
-      data: data,
-      timestamp: Date.now(),
-    });
-
-    // Evict old entries if cache is too large
-    evictOldCacheEntries();
-
-    return data;
-  });
-}
-
-/**
- * Clears the entire cache
- */
-function clearCache() {
-  cache.clear();
-  if (window.logger) {
-    window.logger.log('Cache cleared');
-  }
-}
-
-/**
- * Clears cache entries matching a URL pattern
- * @param {RegExp|string} pattern - Pattern to match URLs against
- */
-function clearCachePattern(pattern) {
-  var regex = typeof pattern === 'string' ? new RegExp(pattern) : pattern;
-  var keys = Array.from(cache.keys());
-
-  keys.forEach(function (key) {
-    if (regex.test(key)) {
-      cache.delete(key);
-    }
-  });
-
-  if (window.logger) {
-    window.logger.log('Cache cleared for pattern:', pattern);
-  }
-}
-
-/**
- * Gets cache statistics
- * @returns {Object} Cache stats
- */
-function getCacheStats() {
-  var now = Date.now();
-  var entries = Array.from(cache.entries());
-
-  return {
-    size: cache.size,
-    maxSize: AppConfig.CACHE.MAX_SIZE,
-    entries: entries.map(function (entry) {
-      return {
-        url: entry[0],
-        age: Math.round((now - entry[1].timestamp) / 1000) + 's',
-        expiresIn: Math.round((AppConfig.CACHE.TTL - (now - entry[1].timestamp)) / 1000) + 's',
-      };
-    }),
-  };
-}
-
-/**
  * Builds a URL with query parameters
  * @param {string} baseUrl - The base URL
  * @param {Object} params - Query parameters as key-value pairs
@@ -386,11 +268,7 @@ function buildUrl(baseUrl, params) {
 if (typeof window !== 'undefined') {
   window.fetchWithTimeout = fetchWithTimeout;
   window.fetchWithRetry = fetchWithRetry;
-  window.fetchWithCache = fetchWithCache;
   window.buildUrl = buildUrl;
-  window.clearCache = clearCache;
-  window.clearCachePattern = clearCachePattern;
-  window.getCacheStats = getCacheStats;
 }
 
 // Export for modules
@@ -398,10 +276,6 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     fetchWithTimeout: fetchWithTimeout,
     fetchWithRetry: fetchWithRetry,
-    fetchWithCache: fetchWithCache,
     buildUrl: buildUrl,
-    clearCache: clearCache,
-    clearCachePattern: clearCachePattern,
-    getCacheStats: getCacheStats,
   };
 }
