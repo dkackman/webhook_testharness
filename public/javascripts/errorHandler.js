@@ -92,7 +92,7 @@ function updateUrlParam(paramName, paramValue) {
 
   var url = new URL(window.location);
   url.searchParams.set(paramName, paramValue);
-  window.history.pushState({}, '', url);
+  window.history.replaceState({}, '', url);
 }
 
 // Make available globally
